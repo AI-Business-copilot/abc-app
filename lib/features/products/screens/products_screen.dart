@@ -222,7 +222,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                           : ListView.separated(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               itemCount: _products.length,
-                              separatorBuilder: (_, __) => const SizedBox(height: 8),
+                              separatorBuilder: (ctx, idx) => const SizedBox(height: 8),
                               itemBuilder: (context, index) {
                                 final product = _products[index];
                                 return _buildProductRow(product);
