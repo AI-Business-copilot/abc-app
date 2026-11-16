@@ -1,26 +1,28 @@
 import 'package:abc_app/core/network/api_client.dart';
 import 'package:abc_app/features/alerts/models/alert_models.dart';
+import 'package:abc_app/features/lots/models/lot_models.dart';
 import 'package:abc_app/features/products/services/products_service.dart';
 
 class AlertsService {
   final _dio = ApiClient().dio;
   final _productsService = ProductsService();
 
-  Future<List<LotAlertItem>> getExpiringLots() async {
+  /// The lots that need attention. The endpoint answers `{ lots, total, summary }`.
+  /// Without a `status` filter it returns the WARNING, UNUSABLE and QUARANTINED lots.
+  Future<ExpiringLotsResult> getExpiringLots() async {
     try {
-      final response = await _dio.get('/inventory/lots/expiring');
+      final response = await _dio.get(
+        '/inventory/lots/expiring',
+        queryParameters: {'take': 100},
+      );
       final data = response.data;
-      if (data is List) {
-        return data.map((item) => LotAlertItem.fromJson(item as Map<String, dynamic>)).toList();
-      } else if (data is Map<String, dynamic> && data['data'] is List) {
-        return (data['data'] as List)
-            .map((item) => LotAlertItem.fromJson(item as Map<String, dynamic>))
-            .toList();
+      if (data is Map<String, dynamic>) {
+        return ExpiringLotsResult.fromJson(data);
       }
-      return [];
     } catch (_) {
-      return [];
+      // The alerts tab must not break when the lot list cannot be loaded.
     }
+    return const ExpiringLotsResult();
   }
 
   Future<List<LowStockAlertItem>> getLowStockItems({int threshold = 10}) async {

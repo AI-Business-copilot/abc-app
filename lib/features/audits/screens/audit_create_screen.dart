@@ -1,0 +1,193 @@
+import 'package:flutter/material.dart';
+import 'package:abc_app/core/network/api_error.dart';
+import 'package:abc_app/core/theme/app_theme.dart';
+import 'package:abc_app/core/widgets/app_widgets.dart';
+import 'package:abc_app/features/audits/models/audit_models.dart';
+import 'package:abc_app/features/audits/services/audits_service.dart';
+
+/// F07 — the owner creates a stock audit. The type decides whether the rows count
+/// new lots (`NEW_LOTS`) or existing ones (`RE_AUDIT`).
+class AuditCreateScreen extends StatefulWidget {
+  const AuditCreateScreen({super.key});
+
+  @override
+  State<AuditCreateScreen> createState() => _AuditCreateScreenState();
+}
+
+class _AuditCreateScreenState extends State<AuditCreateScreen> {
+  final _service = AuditsService();
+
+  AuditType _auditType = AuditType.newLots;
+  final _noteController = TextEditingController();
+  bool _isSaving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _create() async {
+    setState(() {
+      _isSaving = true;
+      _error = null;
+    });
+    try {
+      final audit = await _service.createAudit(
+        auditType: _auditType,
+        note: _noteController.text,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Đã tạo đợt kiểm kê ${audit.auditCode}')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = apiErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: const Text('Tạo đợt kiểm kê'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) MessageBanner(message: _error!, isError: true),
+              const Text(
+                'Loại kiểm kê',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primary),
+              ),
+              const SizedBox(height: 8),
+              _AuditTypeOption(
+                type: AuditType.newLots,
+                selected: _auditType == AuditType.newLots,
+                onTap: () => setState(() => _auditType = AuditType.newLots),
+              ),
+              const SizedBox(height: 8),
+              _AuditTypeOption(
+                type: AuditType.reAudit,
+                selected: _auditType == AuditType.reAudit,
+                onTap: () => setState(() => _auditType = AuditType.reAudit),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Ghi chú (không bắt buộc)',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primary),
+              ),
+              const SizedBox(height: 6),
+              TextField(
+                controller: _noteController,
+                maxLines: 3,
+                style: const TextStyle(fontSize: 14),
+                decoration: const InputDecoration(
+                  hintText: 'Ví dụ: kiểm kê kho trước giờ đóng cửa',
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isSaving ? null : _create,
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('Tạo đợt kiểm kê'),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Sau khi tạo, chủ cửa hàng thêm dòng kiểm kê (nhân viên + SKU + lô) ở trang chi tiết.',
+                style: TextStyle(fontSize: 11.5, color: AppTheme.muted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AuditTypeOption extends StatelessWidget {
+  const _AuditTypeOption({
+    required this.type,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AuditType type;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isNew = type == AuditType.newLots;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: selected ? AppTheme.primary : AppTheme.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? AppTheme.primary : AppTheme.border,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isNew ? Icons.new_releases_outlined : Icons.history_rounded,
+                  size: 18,
+                  color: selected ? Colors.white : AppTheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    type.label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13.5,
+                      color: selected ? Colors.white : AppTheme.primary,
+                    ),
+                  ),
+                ),
+                if (selected)
+                  const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              isNew
+                  ? 'Nhân viên nhập số lô và hạn sử dụng khi đếm. Lô được tạo khi đợt kiểm kê được áp dụng.'
+                  : 'Mỗi dòng gắn với một lô có sẵn. Nhân viên đếm và có thể sửa ngày của lô.',
+              style: TextStyle(
+                fontSize: 11.5,
+                color: selected ? Colors.white70 : AppTheme.muted,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

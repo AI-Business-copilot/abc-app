@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class AppConfig {
   static const String supabaseUrl = 'https://vhivkicmqwjiypvbssbv.supabase.co';
   static const String supabaseAnonKey =
@@ -12,4 +14,28 @@ class AppConfig {
 
   // 3. IP dành cho Windows Desktop / iOS Simulator
   static const String apiBaseUrlLocal = 'http://localhost:5000/api';
+
+  /// Custom URL scheme dùng cho OAuth callback trên Android / iOS.
+  /// Phải khớp với `intent-filter` trong AndroidManifest.xml và
+  /// `CFBundleURLTypes` trong ios/Runner/Info.plist.
+  static const String appUrlScheme = 'io.supabase.abcapps';
+
+  /// Redirect URL của OAuth (native): scheme://host/path.
+  static const String appOAuthRedirectUrl = '$appUrlScheme://login-callback';
+
+  /// Redirect URL dùng cho OAuth.
+  /// - Web: trả về địa chỉ hiện tại (bỏ query/hash) để Supabase redirect về đúng trang.
+  /// - Android/iOS: dùng custom scheme để mở lại app.
+  static String get oauthRedirectUrl {
+    if (kIsWeb) {
+      final base = Uri.base;
+      return Uri(
+        scheme: base.scheme,
+        host: base.host,
+        port: base.hasPort ? base.port : null,
+        path: base.path,
+      ).toString();
+    }
+    return appOAuthRedirectUrl;
+  }
 }

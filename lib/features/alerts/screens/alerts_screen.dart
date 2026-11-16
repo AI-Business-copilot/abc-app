@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:abc_app/core/theme/app_theme.dart';
+import 'package:abc_app/core/widgets/app_widgets.dart';
 import 'package:abc_app/features/alerts/models/alert_models.dart';
 import 'package:abc_app/features/alerts/services/alerts_service.dart';
+import 'package:abc_app/features/lots/models/lot_models.dart';
+import 'package:abc_app/features/lots/screens/lot_detail_screen.dart';
 
 class AlertsScreen extends StatefulWidget {
   const AlertsScreen({super.key});
@@ -15,7 +18,7 @@ class _AlertsScreenState extends State<AlertsScreen>
   late TabController _tabController;
   final _alertsService = AlertsService();
 
-  List<LotAlertItem> _expiringLots = [];
+  List<LotItem> _expiringLots = [];
   List<LowStockAlertItem> _lowStockItems = [];
   bool _isLoading = false;
 
@@ -31,12 +34,12 @@ class _AlertsScreenState extends State<AlertsScreen>
       _isLoading = true;
     });
 
-    final lots = await _alertsService.getExpiringLots();
+    final result = await _alertsService.getExpiringLots();
     final lowStock = await _alertsService.getLowStockItems();
 
     if (mounted) {
       setState(() {
-        _expiringLots = lots;
+        _expiringLots = result.lots;
         _lowStockItems = lowStock;
         _isLoading = false;
       });
@@ -105,86 +108,99 @@ class _AlertsScreenState extends State<AlertsScreen>
 
   Widget _buildExpiringLotsTab() {
     if (_expiringLots.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.task_alt_rounded, size: 36, color: AppTheme.success),
-            SizedBox(height: 8),
-            Text(
-              'Không có lô hàng cần xử lý',
-              style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.primary, fontSize: 13.5),
-            ),
-            SizedBox(height: 4),
-            Text(
-              'Mọi lô hàng đều ở ngưỡng ngày an toàn',
-              style: TextStyle(fontSize: 12, color: AppTheme.muted),
-            ),
-          ],
-        ),
+      return ListView(
+        children: const [
+          SizedBox(height: 40),
+          EmptyStateView(
+            title: 'Không có lô hàng cần xử lý',
+            subtitle: 'Mọi lô hàng đều ở ngưỡng ngày an toàn',
+            icon: Icons.task_alt_rounded,
+            iconColor: AppTheme.success,
+          ),
+        ],
       );
     }
 
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       itemCount: _expiringLots.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final lot = _expiringLots[index];
-        final isExpired = lot.daysLeft <= 0;
+        final isExpired = lot.daysUntilExpiry <= 0;
 
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isExpired ? AppTheme.danger.withValues(alpha: 0.3) : AppTheme.warning.withValues(alpha: 0.3),
+        return InkWell(
+          onTap: () async {
+            await Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => LotDetailScreen(lotItem: lot)),
+            );
+            _loadAlerts();
+          },
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isExpired
+                    ? AppTheme.danger.withValues(alpha: 0.3)
+                    : AppTheme.warning.withValues(alpha: 0.3),
+              ),
             ),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                margin: const EdgeInsets.only(top: 2),
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isExpired ? AppTheme.danger : AppTheme.warning,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 2),
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isExpired ? AppTheme.danger : AppTheme.warning,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      lot.productName,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: AppTheme.primary),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Lô: ${lot.lotCode} • Biến thể: ${lot.variantTitle}',
-                      style: const TextStyle(fontSize: 11.5, color: AppTheme.muted),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'HSD: ${lot.expirationDate} • ${isExpired ? "Quá hạn ${-lot.daysLeft} ngày" : "Còn ${lot.daysLeft} ngày"}',
-                      style: TextStyle(
-                        color: isExpired ? AppTheme.danger : AppTheme.warning,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 11.5,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        lot.variant.productName,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          color: AppTheme.primary,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 2),
+                      Text(
+                        'Lô: ${lot.lotNumber} • SKU: ${lot.variant.sku}',
+                        style: const TextStyle(fontSize: 11.5, color: AppTheme.muted),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'HSD: ${formatDay(lot.expirationDate)} • '
+                        '${isExpired ? "Quá hạn ${-lot.daysUntilExpiry} ngày" : "Còn ${lot.daysUntilExpiry} ngày"}',
+                        style: TextStyle(
+                          color: isExpired ? AppTheme.danger : AppTheme.warning,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Text(
-                'SL: ${lot.currentQuantity}',
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: AppTheme.primary),
-              ),
-            ],
+                Text(
+                  'SL: ${lot.totalStock}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: AppTheme.primary,
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -193,30 +209,23 @@ class _AlertsScreenState extends State<AlertsScreen>
 
   Widget _buildLowStockTab() {
     if (_lowStockItems.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: const [
-            Icon(Icons.task_alt_rounded, size: 36, color: AppTheme.success),
-            SizedBox(height: 8),
-            Text(
-              'Tồn kho an toàn',
-              style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.primary, fontSize: 13.5),
-            ),
-            SizedBox(height: 4),
-            Text(
-              'Không có sản phẩm nào chạm ngưỡng tối thiểu',
-              style: TextStyle(fontSize: 12, color: AppTheme.muted),
-            ),
-          ],
-        ),
+      return ListView(
+        children: const [
+          SizedBox(height: 40),
+          EmptyStateView(
+            title: 'Tồn kho an toàn',
+            subtitle: 'Không có sản phẩm nào chạm ngưỡng tối thiểu',
+            icon: Icons.task_alt_rounded,
+            iconColor: AppTheme.success,
+          ),
+        ],
       );
     }
 
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       itemCount: _lowStockItems.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final item = _lowStockItems[index];
         final isOut = item.currentStock == 0;
@@ -238,7 +247,11 @@ class _AlertsScreenState extends State<AlertsScreen>
                   children: [
                     Text(
                       item.productName,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: AppTheme.primary),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13.5,
+                        color: AppTheme.primary,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(

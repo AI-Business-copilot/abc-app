@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:abc_app/core/theme/app_theme.dart';
 import 'package:abc_app/features/auth/services/auth_service.dart';
+import 'package:abc_app/features/auth/widgets/google_logo.dart';
 import 'package:abc_app/features/home/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -10,13 +14,96 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _authService = AuthService();
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
   bool _obscurePassword = true;
   String? _errorMessage;
+
+  StreamSubscription<AuthState>? _authSubscription;
+  Timer? _resumeTimer;
+
+  /// Đảm bảo chỉ một luồng đăng nhập được đi tiếp (email hoặc Google).
+  bool _loginHandled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen(
+      (state) {
+        if (state.event == AuthChangeEvent.signedIn) {
+          _finishSignIn();
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        // Lỗi OAuth (người dùng từ chối, sai redirect, ...) được phát ra ở đây.
+        if (!mounted) return;
+        setState(() {
+          _isGoogleLoading = false;
+          _errorMessage = AuthService.authErrorMessage(
+            error,
+            fallback: 'Không thể đăng nhập với Google.',
+          );
+        });
+      },
+    );
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    if (!_isGoogleLoading) return;
+
+    // Người dùng có thể đóng trình duyệt OAuth mà không đăng nhập.
+    // Chờ nhịp để deep link được xử lý xong rồi mới bỏ trạng thái đang tải.
+    _resumeTimer?.cancel();
+    _resumeTimer = Timer(const Duration(milliseconds: 800), () {
+      if (!mounted || !_isGoogleLoading) return;
+      if (Supabase.instance.client.auth.currentSession != null) return;
+      setState(() {
+        _isGoogleLoading = false;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _resumeTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    _authSubscription?.cancel();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  /// Đồng bộ user / cửa hàng / role / permissions rồi chuyển sang HomeScreen.
+  ///
+  /// Được gọi từ sự kiện `signedIn` của Supabase (Google OAuth hoặc deep link)
+  /// và từ luồng đăng nhập email. `_loginHandled` đảm bảo chỉ một lần.
+  Future<void> _finishSignIn() async {
+    if (_loginHandled) return;
+    _loginHandled = true;
+
+    final error = await _authService.completeSignIn();
+    if (!mounted) return;
+
+    if (error != null) {
+      setState(() {
+        _isLoading = false;
+        _isGoogleLoading = false;
+        _errorMessage = error;
+      });
+      return;
+    }
+
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
+    );
+  }
 
   Future<void> _handleLogin() async {
     final email = _emailController.text.trim();
@@ -30,6 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     setState(() {
+      _loginHandled = false;
       _isLoading = true;
       _errorMessage = null;
     });
@@ -39,49 +127,50 @@ class _LoginScreenState extends State<LoginScreen> {
         email: email,
         password: password,
       );
-
-      final meData = await _authService.fetchCurrentUserAndBusinesses();
-      final business = meData['business'];
-
+      await _finishSignIn();
+    } catch (e) {
       if (!mounted) return;
-
-      if (business != null && business['id'] != null) {
-        await AuthService.saveActiveBusiness(
-          business['id'],
-          business['name'] ?? 'Cửa hàng',
+      setState(() {
+        _isLoading = false;
+        _errorMessage = AuthService.authErrorMessage(
+          e,
+          fallback: 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin kết nối.',
         );
+      });
+    }
+  }
 
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
-        );
-      } else {
+  Future<void> _handleGoogleLogin() async {
+    setState(() {
+      _loginHandled = false;
+      _isGoogleLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final launched = await _authService.signInWithGoogle();
+      if (!launched && mounted) {
         setState(() {
-          _errorMessage = 'Tài khoản này chưa thuộc cửa hàng nào hoặc đang bị tạm khóa.';
+          _isGoogleLoading = false;
+          _errorMessage = 'Không thể mở trình duyệt để đăng nhập với Google.';
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage = 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin kết nối.';
+        _isGoogleLoading = false;
+        _errorMessage = AuthService.authErrorMessage(
+          e,
+          fallback: 'Không thể đăng nhập với Google.',
+        );
       });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
     }
   }
 
   @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final busy = _isLoading || _isGoogleLoading;
+
     return Scaffold(
       backgroundColor: AppTheme.surface,
       body: SafeArea(
@@ -208,7 +297,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 24),
 
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _handleLogin,
+                    onPressed: busy ? null : _handleLogin,
                     child: _isLoading
                         ? const SizedBox(
                             height: 18,
@@ -216,6 +305,33 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : const Text('Truy cập hệ thống'),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Đăng nhập bằng Google
+                  OutlinedButton(
+                    onPressed: busy ? null : _handleGoogleLogin,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primary,
+                      side: const BorderSide(color: AppTheme.border),
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    child: _isGoogleLoading
+                        ? const SizedBox(
+                            height: 18,
+                            width: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                          )
+                        : const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              GoogleLogo(size: 18),
+                              SizedBox(width: 10),
+                              Text('Tiếp tục với Google'),
+                            ],
+                          ),
                   ),
                 ],
               ),

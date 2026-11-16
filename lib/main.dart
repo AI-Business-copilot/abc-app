@@ -50,6 +50,15 @@ class _AuthGuardScreenState extends State<_AuthGuardScreen> {
   }
 
   Future<void> _checkActiveBusiness() async {
+    await AuthService.loadSession();
+
+    // Luôn refresh khi đã có phiên Supabase (kể cả khi cache cửa hàng còn
+    // thiếu), để đăng nhập Google quay lại app từ deep link vẫn vào HomeScreen.
+    if (Supabase.instance.client.auth.currentSession != null) {
+      await AuthService().refreshSession();
+      if (!mounted) return;
+    }
+
     final activeId = await AuthService.getActiveBusinessId();
     if (!mounted) return;
 

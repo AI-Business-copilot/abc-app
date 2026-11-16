@@ -4,6 +4,8 @@ import 'package:abc_app/features/auth/screens/login_screen.dart';
 import 'package:abc_app/features/auth/services/auth_service.dart';
 import 'package:abc_app/features/products/screens/products_screen.dart';
 import 'package:abc_app/features/alerts/screens/alerts_screen.dart';
+import 'package:abc_app/features/audits/screens/audits_list_screen.dart';
+import 'package:abc_app/features/lots/screens/lots_and_scrap_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,6 +22,8 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     const ProductsScreen(), // MOB-02
     const AlertsScreen(),   // MOB-05
+    const AuditsListScreen(), // F07
+    const LotsAndScrapScreen(), // F08
   ];
 
   @override
@@ -134,6 +138,16 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icon(Icons.notifications_active_outlined, size: 20),
               activeIcon: Icon(Icons.notifications_active, size: 20),
               label: 'Cảnh báo',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.fact_check_outlined, size: 20),
+              activeIcon: Icon(Icons.fact_check, size: 20),
+              label: 'Kiểm kê',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.delete_sweep_outlined, size: 20),
+              activeIcon: Icon(Icons.delete_sweep, size: 20),
+              label: 'Lô & Hủy',
             ),
           ],
         ),
