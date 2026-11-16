@@ -13,15 +13,16 @@ class ApiClient {
   late final Dio dio;
 
   ApiClient._internal() {
-    // Trên máy thật kết nối cùng Wi-Fi với máy tính, trỏ tới IP LAN của máy tính: 192.168.88.168:5000
-    // Trên máy ảo Android Emulator trỏ tới 10.0.2.2:5000
-    // Trên Desktop/Web trỏ tới localhost:5000
+    // 1. Web hoặc Desktop -> localhost:5000
+    // 2. Android:
+    //    - Emulator (10.0.2.2)
+    //    - Thiết bị thật qua LAN (192.168.1.40)
     final String baseUrl;
-    if (!kIsWeb && Platform.isAndroid) {
-      // Mặc định ưu tiên IP LAN để thiết bị thật cắm cáp/bắt Wi-Fi đều kết nối được
-      baseUrl = AppConfig.apiBaseUrlLan;
-    } else {
+    if (kIsWeb || !Platform.isAndroid) {
       baseUrl = AppConfig.apiBaseUrlLocal;
+    } else {
+      // Ưu tiên IP LAN hiện tại của máy tính
+      baseUrl = AppConfig.apiBaseUrlLan;
     }
 
     dio = Dio(
@@ -54,7 +55,23 @@ class ApiClient {
 
           return handler.next(options);
         },
-        onError: (DioException error, handler) {
+        onError: (DioException error, handler) async {
+          // Fallback tự động: nếu đang chạy trên Android Emulator mà LAN timeout/refused,
+          // thử lại với 10.0.2.2
+          if (!kIsWeb &&
+              Platform.isAndroid &&
+              error.requestOptions.baseUrl == AppConfig.apiBaseUrlLan &&
+              (error.type == DioExceptionType.connectionTimeout ||
+                  error.type == DioExceptionType.connectionError)) {
+            try {
+              final newOptions = error.requestOptions;
+              newOptions.baseUrl = AppConfig.apiBaseUrlEmulator;
+              final response = await dio.fetch(newOptions);
+              return handler.resolve(response);
+            } catch (_) {
+              // Bỏ qua nếu fallback cũng fail
+            }
+          }
           return handler.next(error);
         },
       ),
