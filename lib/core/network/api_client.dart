@@ -17,7 +17,10 @@ class ApiClient {
     // Trên máy ảo Android Emulator trỏ tới 10.0.2.2:5000
     // Trên Desktop/Web trỏ tới localhost:5000
     final String baseUrl;
-    if (!kIsWeb && Platform.isAndroid) {
+    if (AppConfig.apiBaseUrlOverride.isNotEmpty) {
+      // Ghi đè thủ công bằng --dart-define=API_BASE_URL=...
+      baseUrl = AppConfig.apiBaseUrlOverride;
+    } else if (!kIsWeb && Platform.isAndroid) {
       // Mặc định ưu tiên IP LAN để thiết bị thật cắm cáp/bắt Wi-Fi đều kết nối được
       baseUrl = AppConfig.apiBaseUrlLan;
     } else {

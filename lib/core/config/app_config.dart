@@ -15,6 +15,14 @@ class AppConfig {
   // 3. IP dành cho Windows Desktop / iOS Simulator
   static const String apiBaseUrlLocal = 'http://localhost:5000/api';
 
+  /// Ghi đè URL backend khi chạy trên thiết bị thật.
+  /// Ví dụ: flutter run --dart-define=API_BASE_URL=http://192.168.100.195:5000/api
+  ///
+  /// Khi không truyền `--dart-define`, giá trị này rỗng và các nhánh
+  /// mặc định bên dưới được giữ nguyên (web vẫn dùng localhost).
+  static const String apiBaseUrlOverride =
+      String.fromEnvironment('API_BASE_URL');
+
   /// Custom URL scheme dùng cho OAuth callback trên Android / iOS.
   /// Phải khớp với `intent-filter` trong AndroidManifest.xml và
   /// `CFBundleURLTypes` trong ios/Runner/Info.plist.

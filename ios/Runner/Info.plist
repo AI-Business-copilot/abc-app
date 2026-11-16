@@ -37,6 +37,12 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>io.supabase.abcapps</string>
+		<string>https</string>
+		<string>http</string>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>ABC cần camera để chụp ảnh bằng chứng cho phiếu hủy hàng và quét mã vạch sản phẩm.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
