@@ -94,8 +94,8 @@ class AuthService {
     final Map<String, dynamic> meData;
     try {
       meData = await fetchCurrentUserAndBusinesses();
-    } catch (_) {
-      return 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin kết nối.';
+    } catch (e) {
+      return 'Lỗi gọi API backend: $e';
     }
 
     final business = meData['business'];
