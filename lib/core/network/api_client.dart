@@ -15,14 +15,14 @@ class ApiClient {
   ApiClient._internal() {
     // 1. Web hoặc Desktop -> localhost:5000
     // 2. Android:
-    //    - Emulator (10.0.2.2)
-    //    - Thiết bị thật qua LAN (192.168.1.40)
+    //    - Emulator Android luôn truy cập host qua 10.0.2.2:5000 (đây là loopback alias của Android SDK)
+    //    - Thiết bị thật mới cần IP LAN (192.168.1.40:5000)
     final String baseUrl;
     if (kIsWeb || !Platform.isAndroid) {
       baseUrl = AppConfig.apiBaseUrlLocal;
     } else {
-      // Ưu tiên IP LAN hiện tại của máy tính
-      baseUrl = AppConfig.apiBaseUrlLan;
+      // Mặc định cho Android dùng 10.0.2.2 (hoạt động chuẩn xác trên mọi máy ảo)
+      baseUrl = AppConfig.apiBaseUrlEmulator;
     }
 
     dio = Dio(
@@ -56,16 +56,16 @@ class ApiClient {
           return handler.next(options);
         },
         onError: (DioException error, handler) async {
-          // Fallback tự động: nếu đang chạy trên Android Emulator mà LAN timeout/refused,
-          // thử lại với 10.0.2.2
+          // Fallback tự động: nếu 10.0.2.2 thất bại (ví dụ đang chạy trên thiết bị thật),
+          // tự động thử lại với IP LAN (192.168.1.40)
           if (!kIsWeb &&
               Platform.isAndroid &&
-              error.requestOptions.baseUrl == AppConfig.apiBaseUrlLan &&
+              error.requestOptions.baseUrl == AppConfig.apiBaseUrlEmulator &&
               (error.type == DioExceptionType.connectionTimeout ||
                   error.type == DioExceptionType.connectionError)) {
             try {
               final newOptions = error.requestOptions;
-              newOptions.baseUrl = AppConfig.apiBaseUrlEmulator;
+              newOptions.baseUrl = AppConfig.apiBaseUrlLan;
               final response = await dio.fetch(newOptions);
               return handler.resolve(response);
             } catch (_) {
