@@ -83,6 +83,9 @@ class AuthService {
     return await _supabase.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: AppConfig.oauthRedirectUrl,
+      // Google rejects embedded webviews (SFSafariViewController / Custom Tabs).
+      // supabase_flutter forces this on Android only; iOS needs it explicitly.
+      authScreenLaunchMode: LaunchMode.externalApplication,
       queryParams: const {'access_type': 'offline', 'prompt': 'consent'},
     );
   }

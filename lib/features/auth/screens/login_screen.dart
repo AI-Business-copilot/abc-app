@@ -6,6 +6,7 @@ import 'package:abc_app/core/theme/app_theme.dart';
 import 'package:abc_app/features/auth/services/auth_service.dart';
 import 'package:abc_app/features/auth/widgets/google_logo.dart';
 import 'package:abc_app/features/home/home_screen.dart';
+import 'package:abc_app/features/settings/screens/server_settings_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -183,6 +184,21 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Nút cài đặt máy chủ: cần mở được TRƯỚC khi đăng nhập,
+                  // vì nếu địa chỉ backend sai thì không bao giờ vào được HomeScreen.
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: IconButton(
+                      icon: const Icon(Icons.settings_outlined, size: 20, color: AppTheme.muted),
+                      tooltip: 'Cài đặt máy chủ',
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const ServerSettingsScreen()),
+                        );
+                      },
+                    ),
+                  ),
+
                   // Minimal Brand Signet
                   Align(
                     alignment: Alignment.centerLeft,

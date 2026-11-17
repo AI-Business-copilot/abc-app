@@ -6,6 +6,11 @@
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<!-- OAuth callback is handled by supabase_flutter via app_links. Disabling the Flutter
+	     engine's deep linking stops it from pushing the callback URL into the Dart navigator
+	     as a route name (which would throw "Could not find a generator for route"). -->
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>CFBundleDisplayName</key>
 	<string>Abc App</string>
 	<key>CFBundleExecutable</key>
@@ -47,6 +52,11 @@
 	<string>ABC cần camera để chụp ảnh bằng chứng cho phiếu hủy hàng và quét mã vạch sản phẩm.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>ABC cần truy cập thư viện ảnh để chọn ảnh bằng chứng cho phiếu hủy hàng.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

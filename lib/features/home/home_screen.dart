@@ -6,6 +6,7 @@ import 'package:abc_app/features/products/screens/products_screen.dart';
 import 'package:abc_app/features/alerts/screens/alerts_screen.dart';
 import 'package:abc_app/features/audits/screens/audits_list_screen.dart';
 import 'package:abc_app/features/lots/screens/lots_and_scrap_screen.dart';
+import 'package:abc_app/features/settings/screens/server_settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -102,6 +103,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings_outlined, size: 20, color: AppTheme.muted),
+            tooltip: 'Cài đặt máy chủ',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ServerSettingsScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, size: 20, color: AppTheme.muted),
             tooltip: 'Đăng xuất',

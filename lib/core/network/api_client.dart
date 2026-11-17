@@ -1,10 +1,7 @@
-import 'dart:io';
-
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../config/app_config.dart';
+import '../config/server_address_store.dart';
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
@@ -13,19 +10,10 @@ class ApiClient {
   late final Dio dio;
 
   ApiClient._internal() {
-    // Trên máy thật kết nối cùng Wi-Fi với máy tính, trỏ tới IP LAN của máy tính: 192.168.88.168:5000
-    // Trên máy ảo Android Emulator trỏ tới 10.0.2.2:5000
-    // Trên Desktop/Web trỏ tới localhost:5000
-    final String baseUrl;
-    if (AppConfig.apiBaseUrlOverride.isNotEmpty) {
-      // Ghi đè thủ công bằng --dart-define=API_BASE_URL=...
-      baseUrl = AppConfig.apiBaseUrlOverride;
-    } else if (!kIsWeb && Platform.isAndroid) {
-      // Mặc định ưu tiên IP LAN để thiết bị thật cắm cáp/bắt Wi-Fi đều kết nối được
-      baseUrl = AppConfig.apiBaseUrlLan;
-    } else {
-      baseUrl = AppConfig.apiBaseUrlLocal;
-    }
+    // Địa chỉ backend mặc định lúc khởi động.
+    // Mặc định theo nền tảng, nhưng có thể bị ghi đè lúc chạy bởi giá trị
+    // người dùng lưu trong màn hình Cài đặt (xem ServerAddressStore).
+    final String baseUrl = ServerAddressStore.defaultBaseUrl;
 
     dio = Dio(
       BaseOptions(
@@ -42,6 +30,10 @@ class ApiClient {
     dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
+          // Địa chỉ backend được xác định lại ở mỗi request để người dùng
+          // đổi được trong màn hình Cài đặt mà không cần build lại app.
+          options.baseUrl = await ServerAddressStore.effective();
+
           // Gắn Supabase Access Token nếu user đã login
           final session = Supabase.instance.client.auth.currentSession;
           if (session?.accessToken != null) {
