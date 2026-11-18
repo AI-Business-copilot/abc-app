@@ -93,7 +93,7 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
         lot.totalStock > 0;
     final canCreateScrap = AuthService.hasPermission(AppPermissions.scrapCreate) &&
         lot.effectiveStatus == LotStatus.quarantined &&
-        lot.scrapOrder == null;
+        !lot.scrapOrderBlocksNew;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -194,9 +194,11 @@ class _LotDetailScreenState extends State<LotDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
-                      'Mỗi lô chỉ được có một phiếu hủy.',
-                      style: TextStyle(fontSize: 11.5, color: AppTheme.muted),
+                    Text(
+                      lot.scrapOrderBlocksNew
+                          ? 'Phiếu đang chờ duyệt, nên chưa thể tạo phiếu hủy mới.'
+                          : 'Trạng thái: ${lot.scrapOrder!.statusLabel}. Lô hàng vẫn đang được cách ly, và bạn có thể tạo một phiếu hủy mới.',
+                      style: const TextStyle(fontSize: 11.5, color: AppTheme.muted),
                     ),
                     const SizedBox(height: 10),
                     OutlinedButton(

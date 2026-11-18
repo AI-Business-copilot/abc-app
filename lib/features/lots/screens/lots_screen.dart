@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:abc_app/core/network/api_error.dart';
 import 'package:abc_app/core/theme/app_theme.dart';
 import 'package:abc_app/core/widgets/app_widgets.dart';
+import 'package:abc_app/features/auth/services/auth_service.dart';
 import 'package:abc_app/features/lots/models/lot_models.dart';
 import 'package:abc_app/features/lots/screens/lot_detail_screen.dart';
 import 'package:abc_app/features/lots/services/lots_service.dart';
+import 'package:abc_app/features/scrap/screens/create_scrap_order_screen.dart';
 
 /// F08 — the lots that need attention, grouped by their effective status.
 class LotsScreen extends StatefulWidget {
@@ -169,6 +171,14 @@ class _LotsScreenState extends State<LotsScreen> {
                                       );
                                       _load();
                                     },
+                                    onCreateScrap: (target) async {
+                                      await Navigator.of(context).push<bool>(
+                                        MaterialPageRoute(
+                                          builder: (_) => CreateScrapOrderScreen(lotItem: target),
+                                        ),
+                                      );
+                                      _load();
+                                    },
                                   );
                                 },
                               ),
@@ -216,10 +226,17 @@ class _CountCard extends StatelessWidget {
 }
 
 class _LotCard extends StatelessWidget {
-  const _LotCard({required this.lot, required this.onTap});
+  const _LotCard({required this.lot, required this.onTap, required this.onCreateScrap});
 
   final LotItem lot;
   final VoidCallback onTap;
+  final void Function(LotItem lot) onCreateScrap;
+
+  /// A pending order still blocks a new one; a rejected or cancelled one does not.
+  bool get canCreateScrap =>
+      lot.effectiveStatus == LotStatus.quarantined &&
+      !lot.scrapOrderBlocksNew &&
+      AuthService.hasPermission(AppPermissions.scrapCreate);
 
   @override
   Widget build(BuildContext context) {
@@ -301,10 +318,28 @@ class _LotCard extends StatelessWidget {
             if (lot.scrapOrder != null) ...[
               const SizedBox(height: 6),
               Text(
-                'Đã có phiếu hủy ${lot.scrapOrder!.scrapCode}',
+                'Đã có phiếu hủy ${lot.scrapOrder!.scrapCode} • ${lot.scrapOrder!.statusLabel}',
                 style: const TextStyle(fontSize: 11, color: AppTheme.accent),
               ),
             ],
+            // A settled order does not block a new one, so the staff can file a fresh order
+            // straight from the list, before opening the details.
+            if (canCreateScrap)
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => onCreateScrap(lot),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.danger,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 17),
+                    label: const Text('Tạo phiếu hủy hàng', style: TextStyle(fontSize: 13)),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

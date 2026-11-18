@@ -30,7 +30,6 @@ class _CreateScrapOrderScreenState extends State<CreateScrapOrderScreen> {
       TextEditingController(text: '${widget.lotItem.quarantineQty ?? widget.lotItem.totalStock}');
   final _reasonController = TextEditingController();
   final List<XFile> _photos = [];
-  ScrapSource? _source;
   bool _isSaving = false;
   String? _error;
 
@@ -126,7 +125,6 @@ class _CreateScrapOrderScreenState extends State<CreateScrapOrderScreen> {
         lotItemId: widget.lotItem.id,
         scrapReason: reason,
         scrapQty: quantity,
-        scrapSource: _source,
         images: _photos.map((photo) => File(photo.path)).toList(),
       );
       if (!mounted) return;
@@ -145,6 +143,7 @@ class _CreateScrapOrderScreenState extends State<CreateScrapOrderScreen> {
   @override
   Widget build(BuildContext context) {
     final lot = widget.lotItem;
+    final previousOrder = lot.scrapOrder;
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -159,31 +158,21 @@ class _CreateScrapOrderScreenState extends State<CreateScrapOrderScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             if (_error != null) MessageBanner(message: _error!, isError: true),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppTheme.border),
+            // A pending order still blocks a new one, a settled order does not.
+            if (previousOrder != null && lot.scrapOrderBlocksNew)
+              MessageBanner(
+                message:
+                    'Lô này đã có phiếu hủy ${previousOrder.scrapCode} (${previousOrder.statusLabel}) đang chờ duyệt, nên chưa thể tạo phiếu mới.',
+                isError: true,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    lot.variant.productName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13.5,
-                      color: AppTheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'SKU ${lot.variant.sku} • Lô ${lot.lotNumber} • Đang cách ly ${lot.quarantineQty ?? 0}',
-                    style: const TextStyle(fontSize: 11.5, color: AppTheme.muted),
-                  ),
-                ],
+            if (previousOrder != null && !lot.scrapOrderBlocksNew)
+              MessageBanner(
+                message:
+                    'Phiếu hủy trước ${previousOrder.scrapCode} đã bị xử lý (${previousOrder.statusLabel}). Lô hàng vẫn đang được cách ly, và bạn có thể tạo một phiếu hủy mới.',
               ),
+            Text(
+              '${lot.variant.productName} · ${lot.variant.sku} · lô ${lot.lotNumber}',
+              style: const TextStyle(fontSize: 13, color: AppTheme.muted),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -195,46 +184,20 @@ class _CreateScrapOrderScreenState extends State<CreateScrapOrderScreen> {
             const SizedBox(height: 14),
             TextField(
               controller: _reasonController,
-              maxLines: 2,
+              maxLines: 1,
               maxLength: 255,
               style: const TextStyle(fontSize: 14),
               decoration: const InputDecoration(
-                labelText: 'Lý do hủy *',
+                labelText: 'Lý do hủy',
                 hintText: 'Ví dụ: hết hạn sử dụng, bao bì hư hỏng',
               ),
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              'Nguồn tồn kho',
-              style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.primary),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: [
-                ChoiceChip(
-                  label: const Text('Tự động'),
-                  selected: _source == null,
-                  onSelected: (_) => setState(() => _source = null),
-                ),
-                ChoiceChip(
-                  label: const Text('Hàng hư hỏng'),
-                  selected: _source == ScrapSource.damagedStock,
-                  onSelected: (_) => setState(() => _source = ScrapSource.damagedStock),
-                ),
-                ChoiceChip(
-                  label: const Text('Hàng có thể bán'),
-                  selected: _source == ScrapSource.sellableStock,
-                  onSelected: (_) => setState(() => _source = ScrapSource.sellableStock),
-                ),
-              ],
             ),
             const SizedBox(height: 18),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Ảnh bằng chứng *',
+                  'Ảnh bằng chứng',
                   style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.primary),
                 ),
                 Text(
@@ -244,21 +207,13 @@ class _CreateScrapOrderScreenState extends State<CreateScrapOrderScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            if (_photos.isEmpty)
-              Container(
-                height: 110,
-                decoration: BoxDecoration(
-                  border: Border.all(color: AppTheme.border, style: BorderStyle.solid),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    'Chưa có ảnh nào',
-                    style: const TextStyle(fontSize: 12, color: AppTheme.muted),
-                  ),
-                ),
-              )
-            else
+            OutlinedButton.icon(
+              onPressed: _photos.length >= maxScrapImages ? null : _showPhotoOptions,
+              icon: const Icon(Icons.add_a_photo_rounded, size: 18),
+              label: const Text('Thêm ảnh'),
+            ),
+            if (_photos.isNotEmpty) ...[
+              const SizedBox(height: 10),
               SizedBox(
                 height: 110,
                 child: ListView.separated(
@@ -295,23 +250,27 @@ class _CreateScrapOrderScreenState extends State<CreateScrapOrderScreen> {
                   },
                 ),
               ),
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: _photos.length >= maxScrapImages ? null : _showPhotoOptions,
-              icon: const Icon(Icons.add_a_photo_rounded, size: 18),
-              label: const Text('Thêm ảnh bằng chứng'),
-            ),
+            ],
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _isSaving ? null : _submit,
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
-              child: _isSaving
-                  ? const SizedBox(
-                      height: 18,
-                      width: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Text('Tạo phiếu'),
+            Row(
+              children: [
+                const Spacer(),
+                OutlinedButton(
+                  onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+                  child: const Text('Hủy'),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton(
+                  onPressed: _isSaving ? null : _submit,
+                  child: _isSaving
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Tạo phiếu'),
+                ),
+              ],
             ),
           ],
         ),

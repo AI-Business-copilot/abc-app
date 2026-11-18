@@ -140,6 +140,10 @@ class LotItem {
 
   /// Units still sellable plus units already marked damaged.
   int get totalStock => onHand + damaged;
+
+  /// True when the newest scrap order still blocks a new one. Only a PENDING order does: a
+  /// rejected or cancelled order is settled, so any staff member can file a fresh order.
+  bool get scrapOrderBlocksNew => scrapOrder?.status == 'PENDING';
 }
 
 /// A link to the scrap order already raised for a lot item.
@@ -160,6 +164,20 @@ class ScrapOrderLink {
       scrapCode: json['scrapCode']?.toString() ?? '',
       status: json['status']?.toString() ?? '',
     );
+  }
+
+  /// Vietnamese label for the order status, so the raw code never reaches the user.
+  String get statusLabel {
+    switch (status.toUpperCase()) {
+      case 'COMPLETED':
+        return 'Đã duyệt';
+      case 'REJECTED':
+        return 'Bị từ chối';
+      case 'CANCELLED':
+        return 'Đã hủy bỏ';
+      default:
+        return 'Chờ duyệt';
+    }
   }
 }
 
