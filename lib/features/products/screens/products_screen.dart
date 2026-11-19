@@ -4,6 +4,9 @@ import 'package:abc_app/core/theme/app_theme.dart';
 import 'package:abc_app/features/products/models/product_model.dart';
 import 'package:abc_app/features/products/services/products_service.dart';
 import 'package:abc_app/features/products/screens/barcode_scanner_screen.dart';
+import 'package:abc_app/features/products/screens/barcode_label_screen.dart';
+import 'package:abc_app/features/products/screens/edit_product_screen.dart';
+import 'package:abc_app/features/products/screens/manage_catalog_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -81,7 +84,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
           children: [
             // Search & Scan Controls
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
               color: AppTheme.surface,
               child: Row(
                 children: [
@@ -128,14 +131,14 @@ class _ProductsScreenState extends State<ProductsScreen> {
             ),
             const Divider(height: 1, color: AppTheme.border),
 
-            // Item count & Quick Status bar
+            // Item count & Catalog quick actions
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               color: AppTheme.surface,
               child: Row(
                 children: [
                   Text(
-                    '${_products.length} sản phẩm',
+                    '${_products.length} mặt hàng',
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
@@ -144,15 +147,29 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   ),
                   const Spacer(),
                   InkWell(
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ManageCatalogScreen()),
+                      );
+                      _loadProducts(keyword: _searchController.text);
+                    },
+                    child: const Row(
+                      children: [
+                        Icon(Icons.category_outlined, size: 14, color: AppTheme.accent),
+                        SizedBox(width: 4),
+                        Text('Danh mục & Thuộc tính', style: TextStyle(fontSize: 12, color: AppTheme.accent, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  InkWell(
                     onTap: () => _loadProducts(keyword: _searchController.text),
                     child: const Row(
                       children: [
                         Icon(Icons.refresh_rounded, size: 14, color: AppTheme.muted),
                         SizedBox(width: 4),
-                        Text(
-                          'Cập nhật',
-                          style: TextStyle(fontSize: 12, color: AppTheme.muted),
-                        ),
+                        Text('Cập nhật', style: TextStyle(fontSize: 12, color: AppTheme.muted)),
                       ],
                     ),
                   ),
@@ -248,6 +265,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+          leading: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppTheme.background,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.border),
+              image: product.imageUrl != null && product.imageUrl!.isNotEmpty
+                  ? DecorationImage(image: NetworkImage(product.imageUrl!), fit: BoxFit.cover)
+                  : null,
+            ),
+            child: product.imageUrl == null || product.imageUrl!.isEmpty
+                ? const Icon(Icons.image_outlined, size: 20, color: AppTheme.subtle)
+                : null,
+          ),
           title: Text(
             product.name,
             style: const TextStyle(
@@ -294,6 +326,37 @@ class _ProductsScreenState extends State<ProductsScreen> {
           ),
           children: [
             const Divider(height: 1, color: AppTheme.border),
+            // Edit Header Bar
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              color: AppTheme.surface,
+              child: Row(
+                children: [
+                  Text('Mã: ${product.code}', style: const TextStyle(fontSize: 11.5, color: AppTheme.muted)),
+                  const Spacer(),
+                  InkWell(
+                    onTap: () async {
+                      final updated = await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => EditProductScreen(product: product)),
+                      );
+                      if (updated == true) {
+                        _loadProducts(keyword: _searchController.text);
+                      }
+                    },
+                    child: const Row(
+                      children: [
+                        Icon(Icons.edit_outlined, size: 14, color: AppTheme.accent),
+                        SizedBox(width: 4),
+                        Text('Sửa thông tin / Đổi ảnh', style: TextStyle(fontSize: 12, color: AppTheme.accent, fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: AppTheme.border),
+
             if (product.variants.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(12.0),
@@ -353,6 +416,19 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(width: 10),
+                          IconButton(
+                            icon: const Icon(Icons.print_outlined, size: 18, color: AppTheme.primary),
+                            tooltip: 'In tem mã vạch',
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => BarcodeLabelScreen(product: product, variant: v),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),

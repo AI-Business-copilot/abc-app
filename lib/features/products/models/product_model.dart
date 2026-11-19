@@ -43,6 +43,9 @@ class ProductItem {
   final String id;
   final String code;
   final String name;
+  final String? description;
+  final String? imageUrl;
+  final String? categoryId;
   final String? categoryPath;
   final String? categoryName;
   final int totalStock;
@@ -54,6 +57,9 @@ class ProductItem {
     required this.id,
     required this.code,
     required this.name,
+    this.description,
+    this.imageUrl,
+    this.categoryId,
     this.categoryPath,
     this.categoryName,
     required this.totalStock,
@@ -72,6 +78,9 @@ class ProductItem {
       id: json['id'] ?? '',
       code: json['code'] ?? '',
       name: json['name'] ?? '',
+      description: json['description'],
+      imageUrl: json['imageUrl'],
+      categoryId: json['categoryId'],
       categoryPath: json['categoryPath'],
       categoryName: json['categoryName'],
       totalStock: (json['stockQty'] as num? ?? 0).toInt(),
