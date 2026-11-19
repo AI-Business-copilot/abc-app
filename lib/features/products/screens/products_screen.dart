@@ -93,7 +93,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       controller: _searchController,
                       style: const TextStyle(fontSize: 13.5),
                       decoration: InputDecoration(
-                        hintText: 'Tìm theo tên, SKU, Barcode...',
+                        hintText: 'Tìm theo tên, SKU hoặc mã vạch',
                         prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppTheme.muted),
                         suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
@@ -111,17 +111,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   const SizedBox(width: 8),
                   InkWell(
                     onTap: _openScanner,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(8),
                     child: Container(
-                      height: 48,
-                      width: 48,
+                      height: 44,
+                      width: 44,
                       decoration: BoxDecoration(
-                        color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(10),
+                        color: AppTheme.accentBg,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.accent.withValues(alpha: 0.25)),
                       ),
                       child: const Icon(
                         Icons.qr_code_scanner_rounded,
-                        color: Colors.white,
+                        color: AppTheme.accent,
                         size: 20,
                       ),
                     ),
@@ -283,10 +284,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
           title: Text(
             product.name,
             style: const TextStyle(
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w600,
               fontSize: 14,
               color: AppTheme.primary,
-              letterSpacing: -0.2,
+              letterSpacing: -0.1,
             ),
           ),
           subtitle: Padding(
@@ -308,7 +309,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   '${product.totalStock}',
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: inStock ? AppTheme.success : AppTheme.danger,
                   ),
                 ),
@@ -317,7 +318,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   _currencyFormat.format(product.avgPrice),
                   style: const TextStyle(
                     fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w600,
                     color: AppTheme.primary,
                   ),
                 ),

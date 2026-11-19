@@ -64,11 +64,11 @@ class _AlertsScreenState extends State<AlertsScreen>
               color: AppTheme.surface,
               child: TabBar(
                 controller: _tabController,
-                labelColor: AppTheme.primary,
+                labelColor: AppTheme.accent,
                 unselectedLabelColor: AppTheme.muted,
-                indicatorColor: AppTheme.primary,
+                indicatorColor: AppTheme.accent,
                 indicatorWeight: 2,
-                labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
                 tabs: [
                   Tab(text: 'Hạn dùng (${_expiringLots.length})'),
@@ -85,7 +85,7 @@ class _AlertsScreenState extends State<AlertsScreen>
                       child: SizedBox(
                         width: 24,
                         height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary),
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accent),
                       ),
                     )
                   : RefreshIndicator(

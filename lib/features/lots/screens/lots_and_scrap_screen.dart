@@ -32,11 +32,11 @@ class _LotsAndScrapScreenState extends State<LotsAndScrapScreen>
               color: AppTheme.surface,
               child: TabBar(
                 controller: _tabController,
-                labelColor: AppTheme.primary,
+                labelColor: AppTheme.accent,
                 unselectedLabelColor: AppTheme.muted,
-                indicatorColor: AppTheme.primary,
+                indicatorColor: AppTheme.accent,
                 indicatorWeight: 2,
-                labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
                 tabs: const [
                   Tab(text: 'Lô hàng'),

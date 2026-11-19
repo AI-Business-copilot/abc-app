@@ -187,20 +187,20 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Container(
-                      width: 48,
-                      height: 48,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
-                        color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(12),
+                        color: AppTheme.accent,
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Center(
                         child: Text(
                           'ABC',
                           style: TextStyle(
                             color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 15,
-                            letterSpacing: -0.5,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            letterSpacing: -0.3,
                           ),
                         ),
                       ),
@@ -211,9 +211,9 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                     'Đăng nhập tài khoản',
                     style: TextStyle(
                       fontSize: 22,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
                       color: AppTheme.primary,
-                      letterSpacing: -0.5,
+                      letterSpacing: -0.4,
                     ),
                   ),
                   const SizedBox(height: 6),
