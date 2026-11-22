@@ -61,7 +61,7 @@ class _ManageCatalogScreenState extends State<ManageCatalogScreen>
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: selectedParentId,
+                initialValue: selectedParentId,
                 decoration: const InputDecoration(labelText: 'Danh mục cha (Tùy chọn)'),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('Không có (Cấp 1)')),
@@ -94,7 +94,7 @@ class _ManageCatalogScreenState extends State<ManageCatalogScreen>
                   );
                   _loadData();
                 } catch (e) {
-                  if (mounted) {
+                  if (mounted && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Lỗi tạo danh mục: $e')),
                     );
@@ -253,7 +253,7 @@ class _ManageCatalogScreenState extends State<ManageCatalogScreen>
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: _categories.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      separatorBuilder: (ctx, idx) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final cat = _categories[index];
         final isChild = cat.parentId != null;
@@ -304,7 +304,7 @@ class _ManageCatalogScreenState extends State<ManageCatalogScreen>
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: _attributes.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      separatorBuilder: (ctx, idx) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final attr = _attributes[index];
 

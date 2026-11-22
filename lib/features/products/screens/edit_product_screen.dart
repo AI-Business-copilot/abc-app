@@ -280,7 +280,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
                     _isLoadingCategories
                         ? const LinearProgressIndicator()
                         : DropdownButtonFormField<String>(
-                            value: _categories.any((c) => c.id == _selectedCategoryId)
+                            initialValue: _categories.any((c) => c.id == _selectedCategoryId)
                                 ? _selectedCategoryId
                                 : null,
                             decoration: const InputDecoration(hintText: 'Chọn danh mục'),
