@@ -84,55 +84,57 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 14,
-        title: Row(
-          children: [
-            const AbcLogo(size: 20),
-            const SizedBox(width: 12),
-            Container(
-              width: 1,
-              height: 24,
-              color: AppTheme.border,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+      appBar: _currentIndex == 5
+          ? null
+          : AppBar(
+              titleSpacing: 14,
+              title: Row(
                 children: [
-                  Text(
-                    _businessName,
-                    style: const TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.primary,
-                      letterSpacing: -0.2,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  const AbcLogo(size: 20),
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 1,
+                    height: 24,
+                    color: AppTheme.border,
                   ),
-                  const Text(
-                    'Không gian vận hành ABC Mobile',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w400,
-                      color: AppTheme.muted,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _businessName,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.primary,
+                            letterSpacing: -0.2,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const Text(
+                          'Không gian vận hành ABC Mobile',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w400,
+                            color: AppTheme.muted,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.logout_rounded, size: 20, color: AppTheme.muted),
+                  tooltip: 'Đăng xuất',
+                  onPressed: _handleSignOut,
+                ),
+                const SizedBox(width: 4),
+              ],
             ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, size: 20, color: AppTheme.muted),
-            tooltip: 'Đăng xuất',
-            onPressed: _handleSignOut,
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
       body: _screens[_currentIndex],
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
