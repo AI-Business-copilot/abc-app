@@ -179,7 +179,7 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                 children: [
                   // Logo ABC theo chuan Web Dashboard
                   const Center(
-                    child: AbcLogo(showBadge: true, size: 28),
+                    child: AbcLogo(size: 34),
                   ),
                   const SizedBox(height: 20),
 

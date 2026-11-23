@@ -88,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
         titleSpacing: 14,
         title: Row(
           children: [
-            const AbcLogo(showBadge: false, size: 20),
+            const AbcLogo(size: 20),
             const SizedBox(width: 12),
             Container(
               width: 1,

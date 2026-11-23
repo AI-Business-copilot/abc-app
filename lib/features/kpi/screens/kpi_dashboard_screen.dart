@@ -75,7 +75,7 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
                                 'DOANH THU HÔM NAY',
                                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: Colors.white70),
                               ),
-                              const AbcLogo(showBadge: false, size: 16),
+                              const AbcLogo(size: 16),
                             ],
                           ),
                           const SizedBox(height: 8),
