@@ -74,6 +74,31 @@ class AuthService {
     );
   }
 
+  /// Đăng ký tài khoản mới bằng Email và Mật khẩu.
+  Future<AuthResponse> signUpWithEmail({
+    required String email,
+    required String password,
+    String? fullName,
+  }) async {
+    return await _supabase.auth.signUp(
+      email: email.trim(),
+      password: password,
+      data: fullName != null && fullName.trim().isNotEmpty
+          ? {'full_name': fullName.trim()}
+          : null,
+    );
+  }
+
+  /// Gửi liên kết đặt lại mật khẩu về email.
+  Future<void> sendPasswordResetEmail({
+    required String email,
+  }) async {
+    await _supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      redirectTo: AppConfig.oauthRedirectUrl,
+    );
+  }
+
   /// Đăng nhập bằng Google thông qua OAuth của Supabase.
   ///
   /// Mở trình duyệt hệ thống, sau đó Supabase trả kết quả về app qua deep link
@@ -125,6 +150,12 @@ class AuthService {
       switch (error.code) {
         case 'email_not_confirmed':
           return 'Email chưa được xác nhận. Hãy mở email xác nhận tài khoản rồi thử đăng nhập lại.';
+        case 'user_already_exists':
+          return 'Email này đã được đăng ký. Vui lòng đăng nhập hoặc dùng email khác.';
+        case 'weak_password':
+          return 'Mật khẩu phải có ít nhất 6 ký tự.';
+        case 'over_email_send_rate_limit':
+          return 'Hệ thống đang bận hoặc gửi quá nhiều yêu cầu. Vui lòng thử lại sau ít phút.';
         case 'invalid_credentials':
           return 'Email hoặc mật khẩu không đúng.';
         case 'user_not_found':
