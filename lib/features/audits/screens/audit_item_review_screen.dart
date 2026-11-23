@@ -505,7 +505,10 @@ class _AuditItemReviewScreenState extends State<AuditItemReviewScreen> {
                             // The photos taken at that moment.
                             if (history.images.isNotEmpty) ...[
                               const SizedBox(height: 8),
-                              AuditHistoryImageStrip(images: history.images),
+                              AuditHistoryImageStrip(
+                                images: history.images,
+                                counts: history.counts,
+                              ),
                             ],
                             // The reason sits below the numbers and the photos.
                             if (history.reason != null && history.reason!.isNotEmpty) ...[

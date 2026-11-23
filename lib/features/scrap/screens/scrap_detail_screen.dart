@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:abc_app/core/network/api_error.dart';
 import 'package:abc_app/core/theme/app_theme.dart';
 import 'package:abc_app/core/widgets/app_widgets.dart';
+import 'package:abc_app/core/widgets/image_viewer.dart';
 import 'package:abc_app/features/auth/services/auth_service.dart';
 import 'package:abc_app/features/scrap/models/scrap_models.dart';
 import 'package:abc_app/features/scrap/services/scrap_service.dart';
@@ -473,24 +474,18 @@ class _ScrapDetailScreenState extends State<ScrapDetailScreen> {
 
   void _openImage(BuildContext context, ScrapImage image) {
     if (image.url == null) return;
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: EdgeInsets.zero,
-        child: InteractiveViewer(
-          child: Center(
-            child: Image.network(
-              image.url!,
-              errorBuilder: (_, _, _) => const Icon(
-                Icons.broken_image_outlined,
-                size: 40,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ),
-      ),
+    final images = _order?.images ?? <ScrapImage>[];
+    final index = images.indexWhere((item) => item.id == image.id);
+    ImageViewer.show(
+      context,
+      images: images
+          .map((item) => ViewerImage(
+                id: item.id,
+                url: item.url,
+                caption: item.uploadedByName,
+              ))
+          .toList(),
+      index: index < 0 ? 0 : index,
     );
   }
 

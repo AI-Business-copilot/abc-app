@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/image_viewer.dart';
 import '../models/audit_models.dart';
 import '../services/audits_service.dart';
 
@@ -107,38 +109,51 @@ class _AuditCountImageStripState extends State<AuditCountImageStrip> {
                         ),
                       );
                     }
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        url,
-                        width: 100,
-                        height: 100,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Container(
+                    return GestureDetector(
+                      onTap: () => ImageViewer.show(
+                        context,
+                        images: _images
+                            .map((item) => ViewerImage(
+                                  id: item.id,
+                                  url: item.url,
+                                  caption: item.uploadedByName,
+                                ))
+                            .toList(),
+                        index: index,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.network(
+                          url,
                           width: 100,
                           height: 100,
-                          color: AppTheme.background,
-                          alignment: Alignment.center,
-                          child: const Text(
-                            'Không tải được ảnh',
-                            style: TextStyle(fontSize: 10, color: AppTheme.muted),
-                            textAlign: TextAlign.center,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                            width: 100,
+                            height: 100,
+                            color: AppTheme.background,
+                            alignment: Alignment.center,
+                            child: const Text(
+                              'Không tải được ảnh',
+                              style: TextStyle(fontSize: 10, color: AppTheme.muted),
+                              textAlign: TextAlign.center,
+                            ),
                           ),
-                        ),
-                        loadingBuilder: (context, child, progress) =>
-                            progress == null
-                                ? child
-                                : Container(
-                                    width: 100,
-                                    height: 100,
-                                    color: AppTheme.background,
-                                    alignment: Alignment.center,
-                                    child: const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                          loadingBuilder: (context, child, progress) =>
+                              progress == null
+                                  ? child
+                                  : Container(
+                                      width: 100,
+                                      height: 100,
+                                      color: AppTheme.background,
+                                      alignment: Alignment.center,
+                                      child: const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      ),
                                     ),
-                                  ),
+                        ),
                       ),
                     );
                   },
