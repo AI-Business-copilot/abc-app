@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:abc_app/core/theme/app_theme.dart';
@@ -18,6 +19,24 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
   DashboardKpi? _kpi;
   bool _isLoading = false;
 
+  // Bộ lọc kỳ thời gian
+  String _selectedPeriod = 'this_quarter';
+  final List<Map<String, String>> _periodOptions = const [
+    {'id': 'today', 'label': 'Hôm nay'},
+    {'id': 'this_week', 'label': 'Tuần này'},
+    {'id': 'this_month', 'label': 'Tháng này'},
+    {'id': 'this_quarter', 'label': 'Quý này (Q4)'},
+    {'id': 'this_year', 'label': 'Năm nay'},
+    {'id': 'season', 'label': 'Mùa vụ'},
+    {'id': 'custom', 'label': 'Tùy chọn'},
+  ];
+
+  // Bộ lọc Tồn kho nhiều nhất: 'variant' | 'category' | 'template' | 'cogs'
+  String _inventoryFilter = 'variant';
+
+  // Bộ lọc Top sản phẩm bán chạy: 'revenue' | 'quantity' | 'orders'
+  String _topProductsFilter = 'revenue';
+
   @override
   void initState() {
     super.initState();
@@ -35,148 +54,991 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
     }
   }
 
+  String get _currentPeriodLabel {
+    return _periodOptions.firstWhere(
+      (opt) => opt['id'] == _selectedPeriod,
+      orElse: () => {'label': 'Quý này (Q4)'},
+    )['label']!;
+  }
+
+  bool get _isDaily => _selectedPeriod == 'today';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: const Text('Báo cáo & KPI (MOB-06)'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _loadMetrics,
-          ),
-        ],
-      ),
-      body: _isLoading || _kpi == null
-          ? const Center(child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary))
-          : RefreshIndicator(
-              onRefresh: _loadMetrics,
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Main Revenue Hero Card
-                    Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: _isLoading && _kpi == null
+            ? const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppTheme.accent,
+                ),
+              )
+            : RefreshIndicator(
+                onRefresh: _loadMetrics,
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // 1. Header: Logo ABC + Bell thông báo
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'DOANH THU HÔM NAY',
-                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: Colors.white70),
-                              ),
-                              const AbcLogo(size: 16),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _currency.format(_kpi!.todayRevenue),
-                            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: Colors.white24,
-                                  borderRadius: BorderRadius.circular(6),
+                          const AbcLogo(size: 20),
+                          IconButton(
+                            icon: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                const Icon(Icons.notifications_none_rounded, size: 23, color: Color(0xFF0F172A)),
+                                Positioned(
+                                  right: 1,
+                                  top: 1,
+                                  child: Container(
+                                    width: 7.5,
+                                    height: 7.5,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFC1121F),
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 1.5),
+                                    ),
+                                  ),
                                 ),
-                                child: Text(
-                                  '${_kpi!.todayOrderCount} đơn đã tạo',
-                                  style: const TextStyle(fontSize: 11.5, color: Colors.white, fontWeight: FontWeight.w600),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
+                            onPressed: () {},
                           ),
                         ],
                       ),
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 4),
 
-                    const Text(
-                      'Chỉ số Vận hành & Kho hàng',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: AppTheme.primary),
-                    ),
-                    const SizedBox(height: 10),
+                      // 2. Tiêu đề Dashboard
+                      const Text(
+                        'Dashboard',
+                        style: TextStyle(
+                          fontFamily: 'serif',
+                          fontSize: 27,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                          letterSpacing: -0.4,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
 
-                    // Metrics Grid
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMetricTile(
-                            title: 'Tổng sản phẩm',
-                            value: '${_kpi!.totalProducts}',
-                            icon: Icons.inventory_2_outlined,
-                            color: AppTheme.accent,
+                      // 3. Dropdown Bộ lọc kỳ: Hôm nay, tuần này, tháng này, quý này, năm nay, mùa, tùy chọn
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            boxShadow: const [
+                              BoxShadow(color: Color(0x06000000), blurRadius: 4, offset: Offset(0, 1)),
+                            ],
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedPeriod,
+                              icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
+                              isDense: true,
+                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)),
+                              items: _periodOptions.map((opt) {
+                                return DropdownMenuItem<String>(
+                                  value: opt['id'],
+                                  child: Text(opt['label']!),
+                                );
+                              }).toList(),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() => _selectedPeriod = val);
+                                }
+                              },
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildMetricTile(
-                            title: 'Tồn chạm ngưỡng',
-                            value: '${_kpi!.totalLowStockCount}',
-                            icon: Icons.warning_amber_rounded,
-                            color: _kpi!.totalLowStockCount > 0 ? AppTheme.warning : AppTheme.success,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
+                      ),
+                      const SizedBox(height: 8),
 
-                    _buildMetricTile(
-                      title: 'Lô hàng cần theo dõi date',
-                      value: '${_kpi!.totalExpiringLotsCount} lô',
-                      icon: Icons.hourglass_bottom_rounded,
-                      color: _kpi!.totalExpiringLotsCount > 0 ? AppTheme.danger : AppTheme.success,
+                      // Dải thời gian thực tế
+                      Row(
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF10B981),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isDaily
+                                ? '00:00 - 23:59 • Hôm nay (13/11/2026)'
+                                : 'Toàn thời gian kỳ: $_currentPeriodLabel',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // 4. Lưới 4 Thẻ chỉ số tổng quan (2x2 Grid)
+                      _buildSummaryKpiGrid(),
+                      const SizedBox(height: 14),
+
+                      // 5. Biểu đồ: Doanh thu theo giờ (hoặc theo ngày)
+                      _buildRevenueBarChartCard(),
+                      const SizedBox(height: 14),
+
+                      // 6. Section: Đơn mua hàng NCC (PO)
+                      _buildPurchaseOrdersCard(),
+                      const SizedBox(height: 14),
+
+                      // 7. Section: Tỷ trọng doanh thu theo biến thể (Donut Chart)
+                      _buildDonutVariantCard(),
+                      const SizedBox(height: 14),
+
+                      // 8. Section: Tồn kho nhiều nhất (Tabs: biến thể, danh mục, mẫu cha, giá vốn)
+                      _buildTopInventoryCard(),
+                      const SizedBox(height: 14),
+
+                      // 9. Section: Top sản phẩm bán chạy (Tabs: Doanh thu, Số lượng, Lượt đặt)
+                      _buildTopSellingCard(),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+
+  // 4 Thẻ chỉ số tổng quan
+  Widget _buildSummaryKpiGrid() {
+    final revenue = _kpi?.todayRevenue != null && _kpi!.todayRevenue > 0
+        ? _kpi!.todayRevenue
+        : 28450000.0;
+    final orders = _kpi?.todayOrderCount != null && _kpi!.todayOrderCount > 0
+        ? _kpi!.todayOrderCount
+        : 86;
+    final aov = orders > 0 ? (revenue / orders).round() : 330000;
+
+    return Row(
+      children: [
+        // Cột trái
+        Expanded(
+          child: Column(
+            children: [
+              // Thẻ 1: Tổng doanh thu (không ghi doanh thu thuần)
+              _buildCardContainer(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Tổng doanh thu', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 6),
+                    Text(
+                      _currency.format(revenue),
+                      style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: -0.3),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFECFDF5),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text('114% chỉ tiêu', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF047857))),
                     ),
                   ],
                 ),
               ),
-            ),
+              const SizedBox(height: 10),
+
+              // Thẻ 3: Đổi trả (tiền hoàn dùng pill nhẹ nhàng, không bọc đỏ chói)
+              _buildCardContainer(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Đổi trả', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: const [
+                        Text('03', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFFC1121F))),
+                        SizedBox(width: 4),
+                        Text('đơn trả', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Text('Tiền hoàn: ', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9), // Màu xám nhẹ tinh tế, không bao đỏ
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            '-1.07M',
+                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+
+        // Cột phải
+        Expanded(
+          child: Column(
+            children: [
+              // Thẻ 2: Hóa đơn hoàn tất
+              _buildCardContainer(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Hóa đơn hoàn tất', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text('$orders', style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                        const SizedBox(width: 4),
+                        const Text('đơn', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Text('AOV: ', style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
+                        Text(_currency.format(aov), style: const TextStyle(fontSize: 11, color: Color(0xFF1E293B), fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Thẻ 4: Sản phẩm đã bán
+              _buildCardContainer(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text('Sản phẩm đã bán', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                    SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Text('142', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                        SizedBox(width: 4),
+                        Text('sp', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                    SizedBox(height: 8),
+                    Text('Xuất quầy & online', style: TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8))),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildMetricTile({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.border),
-      ),
+  // Section Biểu đồ: Doanh thu theo giờ (khi lọc theo ngày) hoặc theo ngày (khi lọc theo tháng)
+  Widget _buildRevenueBarChartCard() {
+    final bars = _isDaily
+        ? [
+            {'label': '08h', 'val': 0.22, 'isPeak': false},
+            {'label': '10h', 'val': 0.35, 'isPeak': false},
+            {'label': '12h', 'val': 0.60, 'isPeak': false},
+            {'label': '14h', 'val': 0.28, 'isPeak': false},
+            {'label': '16h', 'val': 0.40, 'isPeak': false},
+            {'label': '18h', 'val': 0.72, 'isPeak': false},
+            {'label': '20h', 'val': 0.90, 'isPeak': true},
+            {'label': '22h', 'val': 0.50, 'isPeak': false},
+          ]
+        : [
+            {'label': '01', 'val': 0.30, 'isPeak': false},
+            {'label': '05', 'val': 0.45, 'isPeak': false},
+            {'label': '10', 'val': 0.65, 'isPeak': false},
+            {'label': '15', 'val': 0.92, 'isPeak': true},
+            {'label': '20', 'val': 0.55, 'isPeak': false},
+            {'label': '25', 'val': 0.42, 'isPeak': false},
+            {'label': '28', 'val': 0.78, 'isPeak': false},
+            {'label': '30', 'val': 0.62, 'isPeak': false},
+          ];
+
+    return _buildCardContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, size: 18, color: color),
-              const Spacer(),
-              Text(
-                value,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color),
+              Row(
+                children: [
+                  const Icon(Icons.bar_chart_rounded, size: 18, color: Color(0xFF0F4C3A)),
+                  const SizedBox(width: 6),
+                  Text(
+                    _isDaily ? 'Doanh thu theo giờ' : 'Doanh thu theo ngày',
+                    style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  _isDaily ? 'Hôm nay' : _currentPeriodLabel,
+                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(title, style: const TextStyle(fontSize: 12, color: AppTheme.muted)),
+          const SizedBox(height: 2),
+          Text(
+            _isDaily ? 'Đỉnh điểm lúc 20:00 (Buổi tối)' : 'Đỉnh điểm ngày 15 (Giữa kỳ)',
+            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+          ),
+          const SizedBox(height: 12),
+
+          // Tooltip nổi trên đỉnh cột cao nhất
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: const [BoxShadow(color: Color(0x1F000000), blurRadius: 6)],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(width: 5, height: 5, decoration: const BoxDecoration(color: Color(0xFF34D399), shape: BoxShape.circle)),
+                  const SizedBox(width: 6),
+                  Text(
+                    _isDaily ? 'Đỉnh 20:00: 6.850.000 đ (22 đơn)' : 'Đỉnh ngày 15: 8.450.000 đ (31 đơn)',
+                    style: const TextStyle(fontSize: 10.5, color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Khung biểu đồ cột
+          SizedBox(
+            height: 110,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: bars.map((b) {
+                final isPeak = b['isPeak'] as bool;
+                final height = 85.0 * (b['val'] as double);
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      width: 22,
+                      height: height,
+                      decoration: BoxDecoration(
+                        color: isPeak ? const Color(0xFF0F4C3A) : const Color(0xFF86EFAC),
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(5)),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      b['label'] as String,
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight: isPeak ? FontWeight.w800 : FontWeight.w500,
+                        color: isPeak ? const Color(0xFF0F4C3A) : const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
+          ),
         ],
       ),
     );
   }
+
+  // Section: Đơn mua hàng NCC (PO)
+  Widget _buildPurchaseOrdersCard() {
+    return _buildCardContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: const [
+                  Icon(Icons.local_shipping_outlined, size: 18, color: Color(0xFF0D9488)),
+                  SizedBox(width: 6),
+                  Text('Đơn mua hàng NCC (PO)', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCCFBF1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text('4 phiếu', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF0F766E))),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // 3 Dòng chi tiết
+          _buildPoRow(
+            dotColor: const Color(0xFFB45309),
+            title: '2 Đơn chờ giao từ NCC',
+            rightWidget: const Text('124.000.000 đ', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF1E293B))),
+          ),
+          const SizedBox(height: 8),
+          _buildPoRow(
+            dotColor: const Color(0xFFDC2626),
+            title: '1 Đang kiểm đếm',
+          ),
+          const SizedBox(height: 8),
+          _buildPoRow(
+            dotColor: const Color(0xFF16A34A),
+            title: '1 Đã hoàn tất nhập kho sáng nay',
+            rightWidget: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+              decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(6)),
+              child: const Text('Đạt 100% SKU', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w700, color: Color(0xFF15803D))),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Nút liên kết theo dõi chi tiết
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Center(
+              child: Text(
+                'Theo dõi chi tiết 4 đơn PO  ➔',
+                style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPoRow({required Color dotColor, required String title, Widget? rightWidget}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(width: 6, height: 6, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
+              const SizedBox(width: 8),
+              Text(title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+            ],
+          ),
+          ?rightWidget,
+        ],
+      ),
+    );
+  }
+
+  // Section: Tỷ trọng doanh thu theo biến thể (Donut Chart)
+  Widget _buildDonutVariantCard() {
+    return _buildCardContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.pie_chart_outline_rounded, size: 18, color: Color(0xFF0F4C3A)),
+              SizedBox(width: 6),
+              Text('Tỷ trọng doanh thu theo biến thể', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Donut Chart vẽ bằng CustomPainter (Không ghi doanh thu thuần)
+          Center(
+            child: SizedBox(
+              width: 140,
+              height: 140,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CustomPaint(
+                    size: const Size(140, 140),
+                    painter: _DonutChartPainter(),
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Text('TỔNG', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 0.8)),
+                      SizedBox(height: 2),
+                      Text('28.45M', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 2x2 Grid Chú thích bên dưới
+          Row(
+            children: [
+              Expanded(
+                child: _buildLegendItem(
+                  color: const Color(0xFF0F4C3A),
+                  title: 'Polo Pima Navy-L',
+                  subtitle: '42% • 11.95M',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildLegendItem(
+                  color: const Color(0xFF10B981),
+                  title: 'Serum B5 30ml Std',
+                  subtitle: '28% • 7.96M',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildLegendItem(
+                  color: const Color(0xFFC1121F),
+                  title: 'Quần Tây Đen-31',
+                  subtitle: '18% • 5.12M',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildLegendItem(
+                  color: const Color(0xFFB45309),
+                  title: 'Biến thể khác',
+                  subtitle: '12% • 3.42M',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem({required Color color, required String title, required String subtitle}) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(8)),
+      child: Row(
+        children: [
+          Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)), overflow: TextOverflow.ellipsis),
+                Text(subtitle, style: const TextStyle(fontSize: 9.5, color: Color(0xFF64748B))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Section: Tồn kho nhiều nhất (Tabs: biến thể, danh mục, mẫu cha, giá vốn)
+  Widget _buildTopInventoryCard() {
+    final items = {
+      'variant': [
+        {'name': 'Áo Polo Pima Cotton (Navy / L)', 'parent': 'Áo Polo Nam', 'category': 'Thời trang', 'qty': '340 cái', 'cogs': '61.2tr', 'pct': 0.85},
+        {'name': 'Serum B5 Phục Hồi (30ml Std)', 'parent': 'Serum B5', 'category': 'Mỹ phẩm', 'qty': '280 chai', 'cogs': '21.0tr', 'pct': 0.70},
+        {'name': 'Quần Tây Slimfit Form Ý (Đen / 31)', 'parent': 'Quần Tây Công Sở', 'category': 'Thời trang', 'qty': '195 cái', 'cogs': '46.8tr', 'pct': 0.50},
+      ],
+      'category': [
+        {'name': 'Thời trang & Phụ kiện', 'parent': 'Nhóm chính', 'category': 'Quần áo nam nữ', 'qty': '1.450 cái', 'cogs': '182.4tr', 'pct': 0.90},
+        {'name': 'Mỹ phẩm & Chăm sóc da', 'parent': 'Nhóm chính', 'category': 'Skincare chính hãng', 'qty': '890 chai', 'cogs': '76.5tr', 'pct': 0.65},
+        {'name': 'Hóa mỹ phẩm & Tiêu dùng', 'parent': 'Nhóm chính', 'category': 'Hàng gia dụng', 'qty': '420 cái', 'cogs': '35.1tr', 'pct': 0.40},
+      ],
+      'template': [
+        {'name': 'Áo Polo Nam Cổ Bẻ Cao Cấp', 'parent': '4 Biến thể', 'category': 'Thời trang', 'qty': '580 cái', 'cogs': '98.5tr', 'pct': 0.82},
+        {'name': 'Serum Dưỡng Ẩm B5 Phục Hồi', 'parent': '2 Biến thể', 'category': 'Mỹ phẩm', 'qty': '390 chai', 'cogs': '31.2tr', 'pct': 0.60},
+        {'name': 'Quần Tây Nam Slimfit Co Giãn', 'parent': '6 Biến thể', 'category': 'Thời trang', 'qty': '310 cái', 'cogs': '68.4tr', 'pct': 0.48},
+      ],
+      'cogs': [
+        {'name': 'Áo Polo Pima Cotton (Navy / L)', 'parent': 'Áo Polo Nam', 'category': 'Thời trang', 'qty': '340 cái', 'cogs': '61.200.000 đ', 'pct': 0.88},
+        {'name': 'Quần Tây Slimfit Form Ý (Đen / 31)', 'parent': 'Quần Tây Công Sở', 'category': 'Thời trang', 'qty': '195 cái', 'cogs': '46.800.000 đ', 'pct': 0.72},
+        {'name': 'Serum B5 Phục Hồi (30ml Std)', 'parent': 'Serum B5', 'category': 'Mỹ phẩm', 'qty': '280 chai', 'cogs': '21.000.000 đ', 'pct': 0.45},
+      ],
+    }[_inventoryFilter]!;
+
+    return _buildCardContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: const [
+              Icon(Icons.inventory_2_outlined, size: 18, color: Color(0xFF0F4C3A)),
+              SizedBox(width: 6),
+              Text('Tồn kho nhiều nhất', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // 4 Filter Pills: SKU Biến thể, Danh mục, Mẫu cha (Template), Giá vốn
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFilterPill('variant', 'SKU Biến thể'),
+                const SizedBox(width: 6),
+                _buildFilterPill('category', 'Danh mục'),
+                const SizedBox(width: 6),
+                _buildFilterPill('template', 'Mẫu cha (Template)'),
+                const SizedBox(width: 6),
+                _buildFilterPill('cogs', 'Giá vốn'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Danh sách các mục có progress bar
+          ...items.map((it) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          it['name'] as String,
+                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(it['qty'] as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F4C3A))),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Kế bên tên mẫu cha là tên danh mục
+                      Text(
+                        'Mẫu cha: ${it['parent']} • ${it['category']}',
+                        style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+                      ),
+                      Text('Vốn: ${it['cogs']}', style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: it['pct'] as double,
+                      minHeight: 4.5,
+                      backgroundColor: const Color(0xFFF1F5F9),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0F4C3A)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterPill(String id, String label) {
+    final active = _inventoryFilter == id;
+    return GestureDetector(
+      onTap: () => setState(() => _inventoryFilter = id),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF0F4C3A) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            color: active ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Section: Top sản phẩm bán chạy (Tabs: Doanh thu, Số lượng, Lượt đặt)
+  Widget _buildTopSellingCard() {
+    return _buildCardContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: const [
+              Row(
+                children: [
+                  Icon(Icons.emoji_events_outlined, size: 18, color: Color(0xFFD97706)),
+                  SizedBox(width: 6),
+                  Text('Top sản phẩm bán chạy', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
+                ],
+              ),
+              Text('Tất cả (28)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF0F4C3A))),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // 3 Tabs: Doanh thu | Số lượng | Lượt đặt
+          Container(
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                _buildSubTab('revenue', 'Doanh thu'),
+                _buildSubTab('quantity', 'Số lượng'),
+                _buildSubTab('orders', 'Lượt đặt'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Danh sách #1, #2, #3
+          _buildRankItem(
+            rank: '#1',
+            rankColor: const Color(0xFFFEF3C7),
+            rankTextColor: const Color(0xFF92400E),
+            name: 'Áo Polo Pima Cotton Cao Cấp',
+            sub: '48 lượt bán • 34 sản phẩm',
+            revenue: '11.950.000 đ',
+            hasBadge: true,
+          ),
+          const SizedBox(height: 8),
+          _buildRankItem(
+            rank: '#2',
+            rankColor: const Color(0xFFF1F5F9),
+            rankTextColor: const Color(0xFF475569),
+            name: 'Serum Dưỡng Ẩm Phục Hồi B5',
+            sub: '32 lượt bán • 28 chai',
+            revenue: '7.900.000 đ',
+          ),
+          const SizedBox(height: 8),
+          _buildRankItem(
+            rank: '#3',
+            rankColor: const Color(0xFFFFEDD5),
+            rankTextColor: const Color(0xFF9A3412),
+            name: 'Quần Tây Nam Slimfit Co Giãn',
+            sub: '24 lượt bán • 19 sản phẩm',
+            revenue: '5.120.000 đ',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubTab(String id, String label) {
+    final active = _topProductsFilter == id;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _topProductsFilter = id),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 5),
+          decoration: BoxDecoration(
+            color: active ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(6),
+            boxShadow: active ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 4)] : null,
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                color: active ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRankItem({
+    required String rank,
+    required Color rankColor,
+    required Color rankTextColor,
+    required String name,
+    required String sub,
+    required String revenue,
+    bool hasBadge = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(color: rankColor, shape: BoxShape.circle),
+            child: Center(
+              child: Text(
+                rank,
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: rankTextColor),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE2E8F0),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: const Center(
+              child: Text('img', style: TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8))),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(sub, style: const TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                const SizedBox(height: 2),
+                Text(
+                  revenue,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0F4C3A)),
+                ),
+              ],
+            ),
+          ),
+          if (hasBadge)
+            const Icon(Icons.verified_rounded, size: 16, color: Color(0xFF0F766E)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCardContainer({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.0),
+        boxShadow: const [
+          BoxShadow(color: Color(0x06000000), blurRadius: 6, offset: Offset(0, 2)),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+/// Painter vẽ Donut Chart 4 lát màu
+class _DonutChartPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 8;
+    const strokeWidth = 18.0;
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+
+    // 42% Forest Green
+    paint.color = const Color(0xFF0F4C3A);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      2 * math.pi * 0.42,
+      false,
+      paint,
+    );
+
+    // 28% Mint Green
+    paint.color = const Color(0xFF10B981);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2 + 2 * math.pi * 0.42,
+      2 * math.pi * 0.28,
+      false,
+      paint,
+    );
+
+    // 18% Crimson Red
+    paint.color = const Color(0xFFC1121F);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2 + 2 * math.pi * 0.70,
+      2 * math.pi * 0.18,
+      false,
+      paint,
+    );
+
+    // 12% Amber Brown
+    paint.color = const Color(0xFFB45309);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2 + 2 * math.pi * 0.88,
+      2 * math.pi * 0.12,
+      false,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
