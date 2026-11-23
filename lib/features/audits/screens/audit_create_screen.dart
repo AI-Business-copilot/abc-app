@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:abc_app/core/network/api_error.dart';
 import 'package:abc_app/core/theme/app_theme.dart';
 import 'package:abc_app/core/widgets/app_widgets.dart';
-import 'package:abc_app/features/audits/models/audit_models.dart';
 import 'package:abc_app/features/audits/services/audits_service.dart';
 
-/// F07 — the owner creates a stock audit. The type decides whether the rows count
-/// new lots (`NEW_LOTS`) or existing ones (`RE_AUDIT`).
+/// F07 — the owner creates a stock audit. Every row counts a lot that is already in the system.
 class AuditCreateScreen extends StatefulWidget {
   const AuditCreateScreen({super.key});
 
@@ -17,7 +15,6 @@ class AuditCreateScreen extends StatefulWidget {
 class _AuditCreateScreenState extends State<AuditCreateScreen> {
   final _service = AuditsService();
 
-  AuditType _auditType = AuditType.newLots;
   final _noteController = TextEditingController();
   bool _isSaving = false;
   String? _error;
@@ -35,7 +32,6 @@ class _AuditCreateScreenState extends State<AuditCreateScreen> {
     });
     try {
       final audit = await _service.createAudit(
-        auditType: _auditType,
         note: _noteController.text,
       );
       if (!mounted) return;
@@ -74,16 +70,34 @@ class _AuditCreateScreenState extends State<AuditCreateScreen> {
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppTheme.primary),
               ),
               const SizedBox(height: 8),
-              _AuditTypeOption(
-                type: AuditType.newLots,
-                selected: _auditType == AuditType.newLots,
-                onTap: () => setState(() => _auditType = AuditType.newLots),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.surface,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.border),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.history_rounded, size: 18, color: AppTheme.primary),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Kiểm kê lô có sẵn',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
-              _AuditTypeOption(
-                type: AuditType.reAudit,
-                selected: _auditType == AuditType.reAudit,
-                onTap: () => setState(() => _auditType = AuditType.reAudit),
+              const SizedBox(height: 6),
+              const Text(
+                'Mỗi dòng gắn với một lô có sẵn. Nhân viên đếm và có thể sửa ngày của lô.',
+                style: TextStyle(fontSize: 11.5, color: AppTheme.muted),
               ),
               const SizedBox(height: 20),
               const Text(
@@ -117,75 +131,6 @@ class _AuditCreateScreenState extends State<AuditCreateScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AuditTypeOption extends StatelessWidget {
-  const _AuditTypeOption({
-    required this.type,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final AuditType type;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isNew = type == AuditType.newLots;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: selected ? AppTheme.primary : AppTheme.surface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: selected ? AppTheme.primary : AppTheme.border,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  isNew ? Icons.new_releases_outlined : Icons.history_rounded,
-                  size: 18,
-                  color: selected ? Colors.white : AppTheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    type.label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13.5,
-                      color: selected ? Colors.white : AppTheme.primary,
-                    ),
-                  ),
-                ),
-                if (selected)
-                  const Icon(Icons.check_circle_rounded, size: 18, color: Colors.white),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              isNew
-                  ? 'Nhân viên nhập số lô và hạn sử dụng khi đếm. Lô được tạo khi đợt kiểm kê được áp dụng.'
-                  : 'Mỗi dòng gắn với một lô có sẵn. Nhân viên đếm và có thể sửa ngày của lô.',
-              style: TextStyle(
-                fontSize: 11.5,
-                color: selected ? Colors.white70 : AppTheme.muted,
-              ),
-            ),
-          ],
         ),
       ),
     );

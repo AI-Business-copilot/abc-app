@@ -49,6 +49,8 @@ class ProductItem {
   final double retailValue;
   final double avgPrice;
   final List<ProductVariant> variants;
+  /// True when the product tracks lots (cosmetics). Clothes have no lot and no expiry.
+  final bool hasLotTracking;
 
   ProductItem({
     required this.id,
@@ -60,6 +62,7 @@ class ProductItem {
     required this.retailValue,
     required this.avgPrice,
     required this.variants,
+    this.hasLotTracking = false,
   });
 
   factory ProductItem.fromJson(Map<String, dynamic> json) {
@@ -78,6 +81,7 @@ class ProductItem {
       retailValue: (json['retailValue'] as num? ?? 0).toDouble(),
       avgPrice: (json['avgPrice'] as num? ?? 0).toDouble(),
       variants: variantsList,
+      hasLotTracking: json['hasLotTracking'] == true,
     );
   }
 }

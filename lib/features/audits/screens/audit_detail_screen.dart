@@ -27,6 +27,7 @@ class _AuditDetailScreenState extends State<AuditDetailScreen> {
   List<StockAuditItem> _items = [];
   bool _isLoading = true;
   bool _onlyMine = false;
+  bool _isActing = false;
   String? _error;
   String? _notice;
 
@@ -94,6 +95,54 @@ class _AuditDetailScreenState extends State<AuditDetailScreen> {
                         if (_notice != null) MessageBanner(message: _notice!),
                         _HeaderCard(audit: audit),
                         const SizedBox(height: 12),
+                        if (audit.status == AuditStatus.draft)
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            margin: const EdgeInsets.only(bottom: 12),
+                            decoration: BoxDecoration(
+                              color: AppTheme.background,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: AppTheme.border),
+                            ),
+                            child: const Text(
+                              'Đây là đợt kiểm kê nháp: nhân viên chưa thấy và các SKU chưa bị khoá. Bạn có thể thêm, xoá dòng và xoá cả đợt cho tới khi bắt đầu kiểm kê.',
+                              style: TextStyle(fontSize: 12, color: AppTheme.muted),
+                            ),
+                          ),
+                        if (audit.status == AuditStatus.draft &&
+                            AuthService.hasPermission(AppPermissions.auditCreate))
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: _isActing ? null : _startAudit,
+                                    icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                                    label: const Text('Bắt đầu kiểm kê'),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: OutlinedButton.icon(
+                                    onPressed: _isActing ? null : _deleteAudit,
+                                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                                    label: const Text('Xoá đợt'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (audit.status == AuditStatus.inProgress &&
+                            AuthService.hasPermission(AppPermissions.auditCreate))
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: OutlinedButton.icon(
+                              onPressed: _isActing ? null : _cancelAudit,
+                              icon: const Icon(Icons.cancel_outlined, size: 18),
+                              label: const Text('Huỷ đợt kiểm kê'),
+                            ),
+                          ),
                         if (audit.status == AuditStatus.inProgress &&
                             AuthService.hasPermission(AppPermissions.auditApproveItem))
                           Container(
@@ -148,7 +197,9 @@ class _AuditDetailScreenState extends State<AuditDetailScreen> {
                                 ? 'Bỏ chọn "Chỉ dòng của tôi" để xem toàn bộ đợt kiểm kê.'
                                 : 'Thêm SKU cần kiểm kê và giao từng dòng cho nhân viên.',
                             icon: Icons.playlist_add_check_rounded,
-                            action: audit.status == AuditStatus.inProgress && !_onlyMine
+                            action: (audit.status == AuditStatus.draft ||
+                                    audit.status == AuditStatus.inProgress) &&
+                                !_onlyMine
                                 ? PermissionGate(
                                     permission: AppPermissions.auditCreate,
                                     child: ElevatedButton(
@@ -168,7 +219,8 @@ class _AuditDetailScreenState extends State<AuditDetailScreen> {
                                 onChanged: _load,
                               ),
                             ),
-                        if (audit.status == AuditStatus.inProgress &&
+                        if ((audit.status == AuditStatus.draft ||
+                                audit.status == AuditStatus.inProgress) &&
                             AuthService.hasPermission(AppPermissions.auditCreate))
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
@@ -190,12 +242,96 @@ class _AuditDetailScreenState extends State<AuditDetailScreen> {
     if (audit == null) return;
     final added = await Navigator.of(context).push<bool>(
       MaterialPageRoute(
-        builder: (_) => AuditRowsScreen(auditId: audit.id, auditType: audit.auditType),
+        builder: (_) => AuditRowsScreen(auditId: audit.id),
       ),
     );
     if (added == true) {
       setState(() => _notice = 'Đã cập nhật phân công.');
       _load();
+    }
+  }
+
+  /// Owner: start the counting. The SKUs are locked from this moment on.
+  Future<void> _startAudit() async {
+    setState(() => _isActing = true);
+    try {
+      await _service.startAudit(widget.auditId);
+      if (!mounted) return;
+      setState(() => _notice = 'Đợt kiểm kê đã bắt đầu. Các SKU liên quan đã bị khoá.');
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = apiErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _isActing = false);
+    }
+  }
+
+  /// Owner: cancel a running audit. The locked SKUs are freed again.
+  Future<void> _cancelAudit() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Huỷ đợt kiểm kê?'),
+        content: const Text('Các SKU đang bị khoá sẽ được mở lại.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Huỷ'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Huỷ đợt kiểm kê'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isActing = true);
+    try {
+      await _service.cancelAudit(widget.auditId);
+      if (!mounted) return;
+      setState(() => _notice = 'Đợt kiểm kê đã được huỷ. Các SKU đã được mở khoá.');
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = apiErrorMessage(e));
+    } finally {
+      if (mounted) setState(() => _isActing = false);
+    }
+  }
+
+  /// Owner: delete a draft and go back to the list.
+  Future<void> _deleteAudit() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Xoá đợt kiểm kê?'),
+        content: const Text('Toàn bộ dòng đã giao sẽ bị xoá. Thao tác này không hoàn lại được.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Huỷ'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Xoá'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _isActing = true);
+    try {
+      await _service.deleteAudit(widget.auditId);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = apiErrorMessage(e));
+      setState(() => _isActing = false);
     }
   }
 }
@@ -208,6 +344,7 @@ class _HeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = switch (audit.status) {
+      AuditStatus.draft => AppTheme.muted,
       AuditStatus.inProgress => AppTheme.warning,
       AuditStatus.done => AppTheme.success,
       AuditStatus.cancelled => AppTheme.muted,
@@ -240,7 +377,7 @@ class _HeaderCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           StatusBadge(
-            label: audit.auditType.label,
+            label: 'Kiểm kê lô có sẵn',
             color: AppTheme.accent,
             background: AppTheme.accent.withValues(alpha: 0.08),
           ),
@@ -311,16 +448,24 @@ class _AuditItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = switch (item.itemStatus) {
-      AuditItemStatus.inProgress => AppTheme.warning,
-      AuditItemStatus.pendingApproval => AppTheme.accent,
-      AuditItemStatus.approved => AppTheme.success,
-    };
+    // A row of a draft has not been counted yet, so it must not claim to be counting.
+    final isDraftRow =
+        audit.status == AuditStatus.draft && item.itemStatus == AuditItemStatus.inProgress;
+    final statusColor = isDraftRow
+        ? AppTheme.muted
+        : switch (item.itemStatus) {
+            AuditItemStatus.inProgress => AppTheme.warning,
+            AuditItemStatus.pendingApproval => AppTheme.accent,
+            AuditItemStatus.approved => AppTheme.success,
+          };
 
+    // The owner never counts: the two counters count, the owner reviews and resolves.
     final canCount = audit.status == AuditStatus.inProgress &&
         item.itemStatus == AuditItemStatus.inProgress &&
         AuthService.hasPermission(AppPermissions.auditCount) &&
-        (AuthService.isOwner || item.assignedTo?.id == AuthService.userId);
+        !AuthService.isOwner &&
+        (item.assignedTo?.id == AuthService.userId ||
+            item.secondCounterUserId == AuthService.userId);
 
     final canReview = audit.status == AuditStatus.inProgress &&
         item.itemStatus == AuditItemStatus.pendingApproval &&
@@ -360,7 +505,10 @@ class _AuditItemCard extends StatelessWidget {
                   ],
                 ),
               ),
-              StatusBadge(label: item.itemStatus.label, color: statusColor),
+              StatusBadge(
+                label: item.itemStatus.labelForAudit(audit.status),
+                color: statusColor,
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -369,19 +517,36 @@ class _AuditItemCard extends StatelessWidget {
             runSpacing: 4,
             children: [
               _MiniStat(label: 'Lô', value: item.lotNumber ?? '—'),
-              _MiniStat(label: 'Hệ thống', value: item.isNewLot ? '—' : '${item.snapshotQty}'),
+              _MiniStat(label: 'Hệ thống', value: '${item.snapshotQty}'),
               _MiniStat(label: 'Đếm', value: '${item.countedQty}'),
               _MiniStat(
                 label: 'Chênh lệch',
-                value: item.isNewLot ? '—' : '${item.computedDiff >= 0 ? '+' : ''}${item.computedDiff}',
+                value: '${item.computedDiff >= 0 ? '+' : ''}${item.computedDiff}',
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
-            'Giao cho: ${item.assignedTo?.name ?? '—'}',
+            'Giao cho: ${item.assignedTo?.name ?? '—'}'
+            '${item.secondCounter == null ? '' : ' • Kiểm kê thứ hai: ${item.secondCounter!.name}'}',
             style: const TextStyle(fontSize: 11.5, color: AppTheme.muted),
           ),
+          // A row nobody has counted yet is not waiting for anyone, so it gets no badge.
+          if (item.countAgreement == CountAgreement.pending ||
+              item.countAgreement == CountAgreement.agreed ||
+              item.countAgreement == CountAgreement.conflict) ...[
+            const SizedBox(height: 6),
+            StatusBadge(
+              label: item.countAgreement.label,
+              color: switch (item.countAgreement) {
+                CountAgreement.conflict => AppTheme.danger,
+                CountAgreement.agreed => AppTheme.success,
+                CountAgreement.pending => AppTheme.warning,
+                CountAgreement.notStarted => AppTheme.subtle,
+                CountAgreement.single => AppTheme.subtle,
+              },
+            ),
+          ],
           if (item.rejectionReason != null && item.rejectionReason!.isNotEmpty) ...[
             const SizedBox(height: 6),
             Container(
@@ -409,7 +574,6 @@ class _AuditItemCard extends StatelessWidget {
                           builder: (_) => AuditCountScreen(
                             auditId: audit.id,
                             itemId: item.id,
-                            auditType: audit.auditType,
                           ),
                         ),
                       );

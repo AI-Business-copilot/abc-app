@@ -10,6 +10,8 @@ import 'package:abc_app/features/audits/services/audits_service.dart';
 class AuditRowDraft {
   String key;
   String assignedToUserId;
+  /// The second counter. Required: every row is counted by two people.
+  String secondCounterUserId;
   AuditProductOption? product;
   VariantOption? variant;
   String lotItemId;
@@ -17,25 +19,26 @@ class AuditRowDraft {
   AuditRowDraft({
     required this.key,
     required this.assignedToUserId,
+    this.secondCounterUserId = '',
     this.product,
     this.variant,
     this.lotItemId = '',
   });
 
+  /// The row has an assignee and a SKU. The second counter and the lot are checked separately
+  /// so a missing one is reported instead of silently dropping the row.
   bool get isComplete =>
       assignedToUserId.isNotEmpty && product != null && variant != null;
 }
 
-/// F07 — the owner adds rows: employee -> SKU -> existing lot (re-audit only).
+/// F07 — the owner adds rows: employee -> SKU -> existing lot.
 class AuditRowsScreen extends StatefulWidget {
   const AuditRowsScreen({
     super.key,
     required this.auditId,
-    required this.auditType,
   });
 
   final String auditId;
-  final AuditType auditType;
 
   @override
   State<AuditRowsScreen> createState() => _AuditRowsScreenState();
@@ -99,29 +102,41 @@ class _AuditRowsScreenState extends State<AuditRowsScreen> {
   }
 
   Future<void> _save() async {
-    if (widget.auditType == AuditType.reAudit) {
-      final blocked = _rows
-          .where((row) => row.product != null && !row.product!.hasLotTracking)
-          .toList();
-      if (blocked.isNotEmpty) {
-        setState(
-          () => _error =
-              'Sản phẩm "${blocked.first.product!.name}" không quản lý lô nên không thể kiểm kê lại. Hãy dùng kiểm kê lô mới.',
-        );
-        return;
-      }
+    final blocked = _rows
+        .where((row) => row.product != null && !row.product!.hasLotTracking)
+        .toList();
+    if (blocked.isNotEmpty) {
+      setState(
+        () => _error =
+            'Sản phẩm "${blocked.first.product!.name}" không quản lý lô nên không thể kiểm kê.',
+      );
+      return;
     }
     final complete = _rows.where((row) => row.isComplete).toList();
     if (complete.isEmpty) {
       setState(() => _error = 'Cần ít nhất một dòng có nhân viên và SKU.');
       return;
     }
-    if (widget.auditType == AuditType.reAudit) {
-      final missingLot = complete.any((row) => row.lotItemId.isEmpty);
-      if (missingLot) {
-        setState(() => _error = 'Kiểm kê lại bắt buộc chọn lô có sẵn cho mỗi dòng.');
-        return;
-      }
+    final missingLot = complete.any((row) => row.lotItemId.isEmpty);
+    if (missingLot) {
+      setState(() => _error = 'Bắt buộc chọn lô có sẵn cho mỗi dòng.');
+      return;
+    }
+    // The second counter must differ from the primary one.
+    final sameCounter = complete.any(
+      (row) =>
+          row.secondCounterUserId.isNotEmpty &&
+          row.secondCounterUserId == row.assignedToUserId,
+    );
+    if (sameCounter) {
+      setState(() => _error = 'Người kiểm kê thứ hai phải khác người được giao.');
+      return;
+    }
+    // Every row is counted by two people, so the second counter is required.
+    final missingSecond = complete.any((row) => row.secondCounterUserId.isEmpty);
+    if (missingSecond) {
+      setState(() => _error = 'Chọn người kiểm kê thứ hai cho mỗi dòng.');
+      return;
     }
 
     setState(() {
@@ -133,8 +148,9 @@ class _AuditRowsScreenState extends State<AuditRowsScreen> {
           .map(
             (row) => AuditItemAssignment(
               assignedToUserId: row.assignedToUserId,
+              secondCounterUserId: row.secondCounterUserId,
               variantId: row.variant!.id,
-              lotItemId: row.lotItemId.isEmpty ? null : row.lotItemId,
+              lotItemId: row.lotItemId,
             ),
           )
           .toList();
@@ -177,9 +193,7 @@ class _AuditRowsScreenState extends State<AuditRowsScreen> {
                       children: [
                         if (_error != null) MessageBanner(message: _error!, isError: true),
                         Text(
-                          widget.auditType == AuditType.reAudit
-                              ? 'Mỗi dòng gồm nhân viên, SKU và một lô có sẵn.'
-                              : 'Mỗi dòng gồm nhân viên và SKU. Nhân viên nhập số lô khi đếm.',
+                          'Mỗi dòng gồm nhân viên, SKU và một lô có sẵn.',
                           style: const TextStyle(fontSize: 12, color: AppTheme.muted),
                         ),
                         const SizedBox(height: 12),
@@ -190,7 +204,6 @@ class _AuditRowsScreenState extends State<AuditRowsScreen> {
                               index: index,
                               row: _rows[index],
                               members: _members,
-                              auditType: widget.auditType,
                               onChanged: (updated) => setState(() {
                                 final rows = [..._rows];
                                 rows[index] = updated;
@@ -235,7 +248,6 @@ class _RowEditorCard extends StatefulWidget {
     required this.index,
     required this.row,
     required this.members,
-    required this.auditType,
     required this.onChanged,
     required this.onRemove,
   });
@@ -243,7 +255,6 @@ class _RowEditorCard extends StatefulWidget {
   final int index;
   final AuditRowDraft row;
   final List<StaffMember> members;
-  final AuditType auditType;
   final ValueChanged<AuditRowDraft> onChanged;
   final VoidCallback onRemove;
 
@@ -263,11 +274,9 @@ class _RowEditorCardState extends State<_RowEditorCard> {
   bool _isLoadingLots = false;
   int _lastSearch = 0;
 
-  bool get _isReAudit => widget.auditType == AuditType.reAudit;
-
-  /// A re-audit may only target products that track lots.
+  /// Only products that track lots can be audited.
   bool get _blocksLotTracking =>
-      _isReAudit && widget.row.product != null && !widget.row.product!.hasLotTracking;
+      widget.row.product != null && !widget.row.product!.hasLotTracking;
 
   @override
   void initState() {
@@ -350,6 +359,7 @@ class _RowEditorCardState extends State<_RowEditorCard> {
     _update(AuditRowDraft(
       key: widget.row.key,
       assignedToUserId: widget.row.assignedToUserId,
+      secondCounterUserId: widget.row.secondCounterUserId,
       product: product,
     ));
     setState(() {
@@ -362,6 +372,7 @@ class _RowEditorCardState extends State<_RowEditorCard> {
     _update(AuditRowDraft(
       key: widget.row.key,
       assignedToUserId: widget.row.assignedToUserId,
+      secondCounterUserId: widget.row.secondCounterUserId,
     ));
     setState(() {
       _skus = [];
@@ -423,6 +434,41 @@ class _RowEditorCardState extends State<_RowEditorCard> {
               _update(AuditRowDraft(
                 key: row.key,
                 assignedToUserId: value ?? '',
+                // Changing the primary counter invalidates a conflicting second counter.
+                secondCounterUserId: value != null && row.secondCounterUserId == value
+                    ? ''
+                    : row.secondCounterUserId,
+                product: row.product,
+                variant: row.variant,
+                lotItemId: row.lotItemId,
+              ));
+            },
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: row.secondCounterUserId.isEmpty ? null : row.secondCounterUserId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Người kiểm kê thứ hai *',
+            ),
+            items: widget.members
+                .where((member) => member.userId != row.assignedToUserId)
+                .map(
+                  (member) => DropdownMenuItem(
+                    value: member.userId,
+                    child: Text(
+                      member.fullName,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: (value) {
+              _update(AuditRowDraft(
+                key: row.key,
+                assignedToUserId: row.assignedToUserId,
+                secondCounterUserId: value ?? '',
                 product: row.product,
                 variant: row.variant,
                 lotItemId: row.lotItemId,
@@ -541,7 +587,7 @@ class _RowEditorCardState extends State<_RowEditorCard> {
                   border: Border.all(color: AppTheme.warning),
                 ),
                 child: const Text(
-                  'Sản phẩm này không quản lý lô nên không thể kiểm kê lại. Hãy dùng kiểm kê lô mới.',
+                  'Sản phẩm này không quản lý lô nên không thể kiểm kê.',
                   style: TextStyle(fontSize: 12, color: AppTheme.warning),
                 ),
               )
@@ -592,16 +638,15 @@ class _RowEditorCardState extends State<_RowEditorCard> {
                   _update(AuditRowDraft(
                     key: row.key,
                     assignedToUserId: row.assignedToUserId,
+                    secondCounterUserId: row.secondCounterUserId,
                     product: row.product,
                     variant: sku,
                   ));
-                  if (_isReAudit) {
-                    _loadLots(sku.id);
-                  }
+                  _loadLots(sku.id);
                 },
               ),
           ],
-          if (_isReAudit && row.variant != null) ...[
+          if (row.variant != null) ...[
             const SizedBox(height: 12),
             const Text(
               'Lô có sẵn *',
@@ -618,7 +663,7 @@ class _RowEditorCardState extends State<_RowEditorCard> {
                   border: Border.all(color: AppTheme.warning),
                 ),
                 child: const Text(
-                  'Sản phẩm này không quản lý lô nên không thể kiểm kê lại. Hãy dùng kiểm kê lô mới.',
+                  'Sản phẩm này không quản lý lô nên không thể kiểm kê.',
                   style: TextStyle(fontSize: 12, color: AppTheme.warning),
                 ),
               )
@@ -663,19 +708,13 @@ class _RowEditorCardState extends State<_RowEditorCard> {
                   _update(AuditRowDraft(
                     key: row.key,
                     assignedToUserId: row.assignedToUserId,
+                    secondCounterUserId: row.secondCounterUserId,
                     product: row.product,
                     variant: row.variant,
                     lotItemId: value ?? '',
                   ));
                 },
               ),
-          ],
-          if (!_isReAudit && row.variant != null) ...[
-            const SizedBox(height: 8),
-            const Text(
-              'Lô mới: nhân viên nhập số lô và hạn sử dụng khi đếm.',
-              style: TextStyle(fontSize: 12, color: AppTheme.muted),
-            ),
           ],
         ],
       ),

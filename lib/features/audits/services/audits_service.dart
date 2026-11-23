@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:dio/dio.dart';
 import 'package:abc_app/core/network/api_client.dart';
 import 'package:abc_app/features/audits/models/audit_models.dart';
 
@@ -74,14 +77,12 @@ class AuditsService {
 
   /// `POST /inventory/audits` — the server generates the audit code.
   Future<StockAudit> createAudit({
-    required AuditType auditType,
     String? note,
     List<AuditItemAssignment> items = const [],
   }) async {
     final response = await _dio.post(
       '/inventory/audits',
       data: {
-        'auditType': auditType.code,
         if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
         if (items.isNotEmpty)
           'items': items.map((item) => item.toJson()).toList(),
@@ -104,39 +105,99 @@ class AuditsService {
   Future<StockAuditItem> reassignItem(
     String auditId,
     String itemId,
-    String assignedToUserId,
-  ) async {
+    String assignedToUserId, {
+    required String secondCounterUserId,
+  }) async {
     final response = await _dio.patch(
       '/inventory/audits/$auditId/items/$itemId/assign',
-      data: {'assignedToUserId': assignedToUserId},
+      data: {
+        'assignedToUserId': assignedToUserId,
+        'secondCounterUserId': secondCounterUserId,
+      },
     );
     return StockAuditItem.fromJson((response.data as Map<String, dynamic>?) ?? const {});
   }
 
   /// `PATCH /inventory/audits/:id/items/:itemId` — saves the count.
   /// `discrepancyReason` is always required by the server.
+  /// `countedDamagedQty` is the broken goods; the total is derived on the server.
+  ///
+  /// When photos are attached the request goes out as `multipart/form-data`: the photos go into
+  /// the `files` field and the count fields are sent as text parts. The `Content-Type:
+  /// application/json` base header of [ApiClient] must not reach this request, otherwise Dio
+  /// would not add the multipart boundary and the server would reject the body.
   Future<StockAuditItem> updateCount(
     String auditId,
     String itemId, {
     required int countedQty,
+    int countedDamagedQty = 0,
     required String discrepancyReason,
     String? lotItemId,
-    String? newLotNumber,
     String? newLotExpirationDate,
     String? newLotManufacturingDate,
+    List<File> images = const [],
   }) async {
+    if (images.isEmpty) {
+      final response = await _dio.patch(
+        '/inventory/audits/$auditId/items/$itemId',
+        data: {
+          'countedQty': countedQty,
+          'countedDamagedQty': countedDamagedQty,
+          'discrepancyReason': discrepancyReason,
+          'lotItemId': ?lotItemId,
+          'newLotExpirationDate': ?newLotExpirationDate,
+          'newLotManufacturingDate': ?newLotManufacturingDate,
+        },
+      );
+      return StockAuditItem.fromJson((response.data as Map<String, dynamic>?) ?? const {});
+    }
+
+    final form = FormData();
+    form.fields.add(MapEntry('countedQty', countedQty.toString()));
+    form.fields.add(MapEntry('countedDamagedQty', countedDamagedQty.toString()));
+    form.fields.add(MapEntry('discrepancyReason', discrepancyReason.trim()));
+    if (lotItemId != null) {
+      form.fields.add(MapEntry('lotItemId', lotItemId));
+    }
+    if (newLotExpirationDate != null) {
+      form.fields.add(MapEntry('newLotExpirationDate', newLotExpirationDate));
+    }
+    if (newLotManufacturingDate != null) {
+      form.fields.add(MapEntry('newLotManufacturingDate', newLotManufacturingDate));
+    }
+    for (final file in images) {
+      form.files.add(
+        MapEntry('files', await MultipartFile.fromFile(file.path)),
+      );
+    }
+
     final response = await _dio.patch(
       '/inventory/audits/$auditId/items/$itemId',
-      data: {
-        'countedQty': countedQty,
-        'discrepancyReason': discrepancyReason,
-        'lotItemId': ?lotItemId,
-        'newLotNumber': ?newLotNumber,
-        'newLotExpirationDate': ?newLotExpirationDate,
-        'newLotManufacturingDate': ?newLotManufacturingDate,
-      },
+      data: form,
+      options: Options(
+        contentType: 'multipart/form-data',
+        sendTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
+      ),
     );
     return StockAuditItem.fromJson((response.data as Map<String, dynamic>?) ?? const {});
+  }
+
+  /// `GET /inventory/audits/:id/items/:itemId/counts/:countId/images` — the evidence photos of
+  /// one counter's count, with fresh signed links.
+  Future<List<AuditItemCountImage>> getAuditCountImages(
+    String auditId,
+    String itemId,
+    String countId,
+  ) async {
+    final response = await _dio.get(
+      '/inventory/audits/$auditId/items/$itemId/counts/$countId/images',
+    );
+    final data = response.data as List? ?? const [];
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(AuditItemCountImage.fromJson)
+        .toList();
   }
 
   /// `POST /inventory/audits/:id/items/:itemId/submit`
@@ -158,6 +219,40 @@ class AuditsService {
       data: {'reason': reason},
     );
     return StockAuditItem.fromJson((response.data as Map<String, dynamic>?) ?? const {});
+  }
+
+  /// `PATCH /inventory/audits/:id/items/:itemId/recount` — the owner sends a conflicting row
+  /// back to BOTH counters so they count again from scratch.
+  Future<StockAuditItem> requestRecount(String auditId, String itemId, String reason) async {
+    final response = await _dio.patch(
+      '/inventory/audits/$auditId/items/$itemId/recount',
+      data: {'reason': reason},
+    );
+    return StockAuditItem.fromJson((response.data as Map<String, dynamic>?) ?? const {});
+  }
+
+  /// `PATCH /inventory/audits/:id/start` — the owner starts the counting of a draft.
+  /// The SKUs are locked and the snapshot is taken at this moment.
+  Future<StockAudit> startAudit(String auditId) async {
+    final response = await _dio.patch('/inventory/audits/$auditId/start');
+    return StockAudit.fromJson((response.data as Map<String, dynamic>?) ?? const {});
+  }
+
+  /// `PATCH /inventory/audits/:id/cancel` — the owner stops a running audit.
+  /// The locked SKUs are freed again.
+  Future<StockAudit> cancelAudit(String auditId) async {
+    final response = await _dio.patch('/inventory/audits/$auditId/cancel');
+    return StockAudit.fromJson((response.data as Map<String, dynamic>?) ?? const {});
+  }
+
+  /// `DELETE /inventory/audits/:id` — the owner deletes a draft.
+  Future<void> deleteAudit(String auditId) async {
+    await _dio.delete('/inventory/audits/$auditId');
+  }
+
+  /// `DELETE /inventory/audits/:id/items/:itemId` — the owner removes one row of a draft.
+  Future<void> deleteAuditItem(String auditId, String itemId) async {
+    await _dio.delete('/inventory/audits/$auditId/items/$itemId');
   }
 
   /// `GET /businesses/members` — the owner assigns rows to these people.

@@ -14,16 +14,22 @@ class ScrapUploadService {
   final _dio = ApiClient().dio;
 
   Future<ScrapOrder> createScrapOrder({
-    required String lotItemId,
+    String? lotItemId,
+    String? variantId,
     required String scrapReason,
     required int scrapQty,
     ScrapSource? scrapSource,
     required List<File> images,
   }) async {
+    assert(lotItemId != null || variantId != null,
+        'A scrap order needs either a lot item or a variant.');
     final form = FormData();
-    form.fields.add(
-      MapEntry('lotItemId', lotItemId),
-    );
+    if (lotItemId != null) {
+      form.fields.add(MapEntry('lotItemId', lotItemId));
+    }
+    if (variantId != null) {
+      form.fields.add(MapEntry('variantId', variantId));
+    }
     form.fields.add(MapEntry('scrapReason', scrapReason.trim()));
     form.fields.add(MapEntry('scrapQty', scrapQty.toString()));
     if (scrapSource != null) {

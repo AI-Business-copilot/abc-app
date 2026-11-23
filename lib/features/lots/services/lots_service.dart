@@ -65,4 +65,31 @@ class LotsService {
       },
     );
   }
+
+  /// `GET /inventory/variants/:variantId/quarantine` — the variant-level quarantine of a SKU,
+  /// or null when the SKU is not quarantined.
+  Future<VariantQuarantine?> getVariantQuarantine(String variantId) async {
+    final response = await _dio.get('/inventory/variants/$variantId/quarantine');
+    final data = response.data;
+    if (data is Map<String, dynamic> && data.isNotEmpty) {
+      return VariantQuarantine.fromJson(data);
+    }
+    return null;
+  }
+
+  /// `POST /inventory/variants/:variantId/quarantine` — pulls a quantity of a product that has
+  /// no lot item off the shelf.
+  Future<void> quarantineVariant(
+    String variantId, {
+    required int quantity,
+    String? note,
+  }) async {
+    await _dio.post(
+      '/inventory/variants/$variantId/quarantine',
+      data: {
+        'quantity': quantity,
+        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+      },
+    );
+  }
 }

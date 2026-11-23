@@ -59,10 +59,12 @@ class _AuditsListScreenState extends State<AuditsListScreen> {
         child: Column(
           children: [
             FilterChipBar<String?>(
-              options: const [null, 'IN_PROGRESS', 'DONE', 'CANCELLED'],
+              options: const [null, 'DRAFT', 'IN_PROGRESS', 'DONE', 'CANCELLED'],
               selected: _status,
               labelOf: (value) {
                 switch (value) {
+                  case 'DRAFT':
+                    return 'Nháp';
                   case 'IN_PROGRESS':
                     return 'Đang thực hiện';
                   case 'DONE':
@@ -200,6 +202,7 @@ class _AuditCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = audit.status;
     final color = switch (status) {
+      AuditStatus.draft => AppTheme.muted,
       AuditStatus.inProgress => AppTheme.warning,
       AuditStatus.done => AppTheme.success,
       AuditStatus.cancelled => AppTheme.muted,

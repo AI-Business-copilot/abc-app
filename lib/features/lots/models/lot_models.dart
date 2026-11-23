@@ -146,6 +146,41 @@ class LotItem {
   bool get scrapOrderBlocksNew => scrapOrder?.status == 'PENDING';
 }
 
+/// The quarantine state of a product that has no lot item. The quantity pulled off the shelf is
+/// recorded on the variant, the same way the lot flow records it on the lot item, so the goods
+/// can then be scrapped.
+class VariantQuarantine {
+  final String id;
+  final String variantId;
+  final String sku;
+  final String productName;
+  final int quarantineQty;
+  final DateTime? quarantinedAt;
+  final String? quarantineNote;
+
+  const VariantQuarantine({
+    required this.id,
+    required this.variantId,
+    required this.sku,
+    required this.productName,
+    required this.quarantineQty,
+    this.quarantinedAt,
+    this.quarantineNote,
+  });
+
+  factory VariantQuarantine.fromJson(Map<String, dynamic> json) {
+    return VariantQuarantine(
+      id: json['id']?.toString() ?? '',
+      variantId: json['variantId']?.toString() ?? '',
+      sku: json['sku']?.toString() ?? '',
+      productName: json['productName']?.toString() ?? '',
+      quarantineQty: _toInt(json['quarantineQty']),
+      quarantinedAt: _toDate(json['quarantinedAt']),
+      quarantineNote: json['quarantineNote']?.toString(),
+    );
+  }
+}
+
 /// A link to the scrap order already raised for a lot item.
 class ScrapOrderLink {
   final String id;

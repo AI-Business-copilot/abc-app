@@ -51,7 +51,6 @@ void main() {
       final json = {
         'id': 'audit_1',
         'auditCode': 'PK-2026-001',
-        'auditType': 'RE_AUDIT',
         'status': 'IN_PROGRESS',
         'isLockedForAudit': true,
         'countStartAt': '2026-11-15T08:00:00.000Z',
@@ -66,8 +65,6 @@ void main() {
             'attributeText': 'Trắng / L',
             'lotItemId': 'lot_item_1',
             'lotNumber': 'LOT-2026-05',
-            'lotMode': 'EXISTING',
-            'isNewLot': false,
             'snapshotQty': 10,
             'countedQty': 8,
             'diffQty': -2,
@@ -81,7 +78,6 @@ void main() {
       final audit = StockAudit.fromJson(json);
       expect(audit.id, 'audit_1');
       expect(audit.auditCode, 'PK-2026-001');
-      expect(audit.auditType, AuditType.reAudit);
       expect(audit.status, AuditStatus.inProgress);
       expect(audit.isLockedForAudit, isTrue);
       expect(audit.itemCount, 2);
@@ -91,7 +87,6 @@ void main() {
       final item = audit.items.first;
       expect(item.sku, 'ASM-TRANG-L');
       expect(item.productName, 'Áo sơ mi Oxford');
-      expect(item.lotMode, LotMode.existing);
       expect(item.snapshotQty, 10);
       expect(item.countedQty, 8);
       expect(item.diffQty, -2);

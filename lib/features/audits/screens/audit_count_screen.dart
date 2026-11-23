@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:abc_app/core/network/api_error.dart';
 import 'package:abc_app/core/theme/app_theme.dart';
 import 'package:abc_app/core/widgets/app_widgets.dart';
@@ -7,20 +10,16 @@ import 'package:abc_app/features/audits/services/audits_service.dart';
 
 /// F07 — the counter for one audit row.
 ///
-/// The audit type decides the lot block: a new-lot audit asks the employee for the lot
-/// number and expiry, a re-audit keeps the lot the owner assigned but lets the employee
-/// correct its dates.
+/// The lot was chosen by the owner and is fixed: the employee counts it and may correct its dates.
 class AuditCountScreen extends StatefulWidget {
   const AuditCountScreen({
     super.key,
     required this.auditId,
     required this.itemId,
-    required this.auditType,
   });
 
   final String auditId;
   final String itemId;
-  final AuditType auditType;
 
   @override
   State<AuditCountScreen> createState() => _AuditCountScreenState();
@@ -35,9 +34,12 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
   String? _error;
 
   final _countController = TextEditingController();
+  final _damagedCountController = TextEditingController();
   final _reasonController = TextEditingController();
-  final _lotNumberController = TextEditingController();
   final _fixedLotNumberController = TextEditingController();
+  final _picker = ImagePicker();
+  /// The evidence photos of the broken goods, sent with the count.
+  final List<XFile> _photos = [];
   String? _expirationDate;
   String? _manufacturingDate;
   int _systemQty = 0;
@@ -51,8 +53,8 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
   @override
   void dispose() {
     _countController.dispose();
+    _damagedCountController.dispose();
     _reasonController.dispose();
-    _lotNumberController.dispose();
     _fixedLotNumberController.dispose();
     super.dispose();
   }
@@ -65,15 +67,17 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
     try {
       final item = await _service.getAuditItem(widget.auditId, widget.itemId);
       if (!mounted) return;
-      // A fresh re-audit row starts from the lot's own quantity so the employee only adjusts it.
-      final isFreshRow = item.discrepancyReason == null && item.countedQty == 0;
+      // Blind counting: the server only ever sends this employee their own count,
+      // so the form must start from it and never from the other counter's number.
+      final ownCount = item.counts.isEmpty ? null : item.counts.first;
+      // A fresh row starts from the lot's own quantity so the employee only adjusts it.
+      final isFreshRow = ownCount == null && item.discrepancyReason == null && item.countedQty == 0;
       setState(() {
         _item = item;
         _systemQty = item.snapshotQty;
-        _countController.text =
-            '${item.lotMode == LotMode.existing && isFreshRow ? item.snapshotQty : item.countedQty}';
-        _reasonController.text = item.discrepancyReason ?? '';
-        _lotNumberController.text = item.lotNumber ?? '';
+        _countController.text = '${isFreshRow ? item.snapshotQty : ownCount?.countedQty ?? item.countedQty}';
+        _damagedCountController.text = '${ownCount?.countedDamagedQty ?? item.countedDamagedQty}';
+        _reasonController.text = ownCount?.discrepancyReason ?? item.discrepancyReason ?? '';
         _fixedLotNumberController.text = item.lotNumber ?? '';
         _expirationDate = _toDayValue(item.expirationDate);
         _manufacturingDate = _toDayValue(item.newLotManufacturingDate ?? item.manufacturingDate);
@@ -86,6 +90,65 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
     }
   }
 
+  /// Takes a photo of the broken goods, or picks one from the gallery.
+  Future<void> _pickPhoto(ImageSource source) async {
+    if (_photos.length >= maxAuditImages) {
+      setState(() => _error = 'Một lần đếm có tối đa $maxAuditImages ảnh.');
+      return;
+    }
+    try {
+      final picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1600,
+      );
+      if (picked == null || !mounted) return;
+
+      final size = await File(picked.path).length();
+      if (size > maxAuditImageBytes) {
+        setState(() => _error = 'Ảnh lớn hơn 5 MB. Hãy chọn ảnh nhỏ hơn.');
+        return;
+      }
+
+      setState(() {
+        _photos.add(picked);
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _error = 'Không mở được máy ảnh hoặc thư viện ảnh.');
+    }
+  }
+
+  void _showPhotoOptions() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_camera_rounded),
+              title: const Text('Chụp ảnh'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _pickPhoto(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text('Chọn từ thư viện'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _pickPhoto(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _saveAndSubmit() async {
     final item = _item;
     if (item == null) return;
@@ -95,9 +158,20 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
       setState(() => _error = 'Số lượng đếm phải là số lớn hơn hoặc bằng 0.');
       return;
     }
+    // The broken goods are counted separately from the usable quantity; the total is derived.
+    final countedDamagedQty = int.tryParse(_damagedCountController.text.trim()) ?? 0;
+    if (countedDamagedQty < 0) {
+      setState(() => _error = 'Số lượng hàng hỏng phải là số lớn hơn hoặc bằng 0.');
+      return;
+    }
     final reason = _reasonController.text.trim();
     if (reason.isEmpty) {
       setState(() => _error = 'Vui lòng nhập lý do chênh lệch.');
+      return;
+    }
+    // Broken goods are documented with photos, so the owner can see what was found.
+    if (countedDamagedQty > 0 && _photos.isEmpty) {
+      setState(() => _error = 'Khi phát hiện hàng hỏng, bắt buộc có ít nhất một ảnh bằng chứng.');
       return;
     }
 
@@ -106,35 +180,17 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
       _error = null;
     });
     try {
-      if (widget.auditType == AuditType.newLots) {
-        final lotNumber = _lotNumberController.text.trim();
-        if (lotNumber.isEmpty || _expirationDate == null) {
-          setState(() {
-            _error = 'Lô mới cần có số lô và hạn sử dụng.';
-            _isSaving = false;
-          });
-          return;
-        }
-        await _service.updateCount(
-          widget.auditId,
-          widget.itemId,
-          countedQty: countedQty,
-          discrepancyReason: reason,
-          newLotNumber: lotNumber,
-          newLotExpirationDate: _expirationDate,
-          newLotManufacturingDate: _manufacturingDate,
-        );
-      } else {
-        await _service.updateCount(
-          widget.auditId,
-          widget.itemId,
-          countedQty: countedQty,
-          discrepancyReason: reason,
-          lotItemId: item.lotItemId,
-          newLotExpirationDate: _expirationDate,
-          newLotManufacturingDate: _manufacturingDate,
-        );
-      }
+      await _service.updateCount(
+        widget.auditId,
+        widget.itemId,
+        countedQty: countedQty,
+        countedDamagedQty: countedDamagedQty,
+        discrepancyReason: reason,
+        lotItemId: item.lotItemId,
+        newLotExpirationDate: _expirationDate,
+        newLotManufacturingDate: _manufacturingDate,
+        images: _photos.map((photo) => File(photo.path)).toList(),
+      );
       await _service.submitItem(widget.auditId, widget.itemId);
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -249,14 +305,13 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
                         ),
                       ],
                       const SizedBox(height: 16),
-                      if (widget.auditType == AuditType.reAudit)
-                        _buildFixedLotSection(item)
-                      else
-                        _buildNewLotSection(),
+                      _buildFixedLotSection(item),
                       const SizedBox(height: 16),
                       _buildCounterSection(item),
                       const SizedBox(height: 16),
                       _buildReasonSection(),
+                      const SizedBox(height: 16),
+                      _buildPhotoSection(),
                       const SizedBox(height: 24),
                       if (item.itemStatus == AuditItemStatus.inProgress)
                         Row(
@@ -305,56 +360,6 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
     );
   }
 
-  Widget _buildNewLotSection() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppTheme.warningBg,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.35)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Lô mới chưa có trong hệ thống. Lô sẽ được tạo khi chủ cửa hàng áp dụng đợt kiểm kê.',
-            style: TextStyle(fontSize: 11.5, color: AppTheme.warning),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _lotNumberController,
-            maxLength: 100,
-            style: const TextStyle(fontSize: 14),
-            decoration: const InputDecoration(
-              labelText: 'Số lô *',
-              counterText: '',
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: _DateField(
-                  label: 'Hạn sử dụng *',
-                  value: _expirationDate,
-                  onChanged: (value) => setState(() => _expirationDate = value),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _DateField(
-                  label: 'Ngày sản xuất',
-                  value: _manufacturingDate,
-                  onChanged: (value) => setState(() => _manufacturingDate = value),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildFixedLotSection(StockAuditItem item) {
     final expiryChanged = _expirationDate != _toDayValue(item.lotExpirationDate);
     final mfgChanged = _manufacturingDate != _toDayValue(item.lotManufacturingDate);
@@ -384,7 +389,7 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
             children: [
               Expanded(
                 child: _DateField(
-                  label: 'Hạn sử dụng *',
+                  label: 'Hạn sử dụng',
                   value: _expirationDate,
                   onChanged: (value) => setState(() => _expirationDate = value),
                 ),
@@ -419,6 +424,11 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
             'Lô đã được chủ cửa hàng chỉ định và không thể thay đổi. Bạn vẫn có thể sửa ngày của lô.',
             style: TextStyle(fontSize: 11.5, color: AppTheme.muted),
           ),
+          const SizedBox(height: 4),
+          const Text(
+            'Bỏ trống nếu sản phẩm không có hạn sử dụng (quần áo, phụ kiện). Mỹ phẩm thì nhập hạn sử dụng của lô.',
+            style: TextStyle(fontSize: 11, color: AppTheme.muted),
+          ),
         ],
       ),
     );
@@ -426,7 +436,10 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
 
   Widget _buildCounterSection(StockAuditItem item) {
     final diff = int.tryParse(_countController.text.trim());
-    final showDiff = !item.isNewLot && diff != null;
+    final damaged = int.tryParse(_damagedCountController.text.trim()) ?? 0;
+    final showDiff = diff != null;
+    // The total is derived, never typed: usable + broken.
+    final total = (diff ?? 0) + damaged;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -437,13 +450,11 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!item.isNewLot) ...[
-            Text(
-              'Số lượng hệ thống: $_systemQty',
-              style: const TextStyle(fontSize: 12.5, color: AppTheme.muted),
-            ),
-            const SizedBox(height: 8),
-          ],
+          Text(
+            'Số lượng hệ thống: $_systemQty',
+            style: const TextStyle(fontSize: 12.5, color: AppTheme.muted),
+          ),
+          const SizedBox(height: 8),
           Row(
             children: [
               Expanded(
@@ -451,7 +462,7 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
                   controller: _countController,
                   keyboardType: TextInputType.number,
                   style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  decoration: const InputDecoration(labelText: 'Số lượng đếm *'),
+                  decoration: const InputDecoration(labelText: 'Số lượng sử dụng được *'),
                   onChanged: (_) => setState(() {}),
                 ),
               ),
@@ -474,6 +485,46 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _damagedCountController,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  decoration: const InputDecoration(labelText: 'Số lượng hàng hỏng'),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
+              const SizedBox(width: 10),
+              IconButton(
+                icon: const Icon(Icons.remove_circle_outline_rounded, color: AppTheme.muted),
+                onPressed: () {
+                  final current = int.tryParse(_damagedCountController.text.trim()) ?? 0;
+                  _damagedCountController.text = '${current > 0 ? current - 1 : 0}';
+                  setState(() {});
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.add_circle_outline_rounded, color: AppTheme.muted),
+                onPressed: () {
+                  final current = int.tryParse(_damagedCountController.text.trim()) ?? 0;
+                  _damagedCountController.text = '${current + 1}';
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Tổng số lượng bàn giao: $total',
+            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.primary),
+          ),
+          const Text(
+            'Tổng = số lượng sử dụng được + số lượng hàng hỏng. Tổng được tính tự động.',
+            style: TextStyle(fontSize: 11, color: AppTheme.muted),
+          ),
           if (showDiff) ...[
             const SizedBox(height: 8),
             Text(
@@ -482,6 +533,95 @@ class _AuditCountScreenState extends State<AuditCountScreen> {
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: diff - _systemQty == 0 ? AppTheme.success : AppTheme.danger,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// The evidence photos of the broken goods. A photo is required when broken goods were counted.
+  Widget _buildPhotoSection() {
+    final damaged = int.tryParse(_damagedCountController.text.trim()) ?? 0;
+    final required = damaged > 0;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                'Ảnh bằng chứng hàng hỏng',
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.primary),
+              ),
+              if (required)
+                const Text(
+                  ' *',
+                  style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: AppTheme.danger),
+                ),
+              const Spacer(),
+              Text(
+                '${_photos.length}/$maxAuditImages ảnh • JPEG, PNG, WebP • tối đa 5 MB',
+                style: const TextStyle(fontSize: 10.5, color: AppTheme.muted),
+              ),
+            ],
+          ),
+          if (required) ...[
+            const SizedBox(height: 4),
+            const Text(
+              'Bạn đã đếm ra hàng hỏng, nên cần ít nhất một ảnh để chủ cửa hàng đối chiếu.',
+              style: TextStyle(fontSize: 11, color: AppTheme.warning),
+            ),
+          ],
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _isSaving || _photos.length >= maxAuditImages ? null : _showPhotoOptions,
+            icon: const Icon(Icons.add_a_photo_rounded, size: 18),
+            label: const Text('Thêm ảnh'),
+          ),
+          if (_photos.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 110,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _photos.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemBuilder: (context, index) {
+                  final photo = _photos[index];
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.file(
+                          File(photo.path),
+                          width: 110,
+                          height: 110,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: 2,
+                        right: 2,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _photos.removeAt(index)),
+                          child: const CircleAvatar(
+                            radius: 12,
+                            backgroundColor: Colors.black54,
+                            child: Icon(Icons.close_rounded, size: 15, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           ],

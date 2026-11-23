@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:abc_app/core/network/api_error.dart';
 import 'package:abc_app/core/theme/app_theme.dart';
+import 'package:abc_app/features/lots/models/lot_models.dart';
+import 'package:abc_app/features/lots/services/lots_service.dart';
 import 'package:abc_app/features/products/models/product_model.dart';
 import 'package:abc_app/features/products/services/products_service.dart';
 import 'package:abc_app/features/products/screens/barcode_scanner_screen.dart';
+import 'package:abc_app/features/scrap/screens/variant_scrap_screens.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -14,6 +18,7 @@ class ProductsScreen extends StatefulWidget {
 
 class _ProductsScreenState extends State<ProductsScreen> {
   final _productsService = ProductsService();
+  final _lotsService = LotsService();
   final _searchController = TextEditingController();
   final _currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: 'đ');
 
@@ -66,6 +71,50 @@ class _ProductsScreenState extends State<ProductsScreen> {
     }
   }
 
+  /// F08: quarantine a product that has no lot, so its broken goods can be scrapped.
+  Future<void> _quarantineVariant(ProductItem product, ProductVariant variant) async {
+    final done = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => QuarantineVariantScreen(
+          variantId: variant.id,
+          sku: variant.sku,
+          productName: product.name,
+          stock: variant.totalOnHand,
+        ),
+      ),
+    );
+    if (done == true) _loadProducts(keyword: _searchController.text);
+  }
+
+  /// F08: raise a scrap order for a quarantined product that has no lot.
+  Future<void> _createVariantScrap(ProductItem product, ProductVariant variant) async {
+    VariantQuarantine? quarantine;
+    try {
+      quarantine = await _lotsService.getVariantQuarantine(variant.id);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(apiErrorMessage(e))),
+      );
+      return;
+    }
+    if (!mounted) return;
+
+    if (quarantine == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sản phẩm này chưa được cách ly. Hãy cách ly trước khi tạo phiếu hủy hàng.'),
+        ),
+      );
+      return;
+    }
+
+    final target = quarantine;
+    final done = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => CreateVariantScrapScreen(quarantine: target)),
+    );
+    if (done == true) _loadProducts(keyword: _searchController.text);
+  }
   @override
   void dispose() {
     _searchController.dispose();
@@ -329,6 +378,28 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                   'SKU: ${v.sku}${v.barcode != null && v.barcode!.isNotEmpty ? " • ${v.barcode}" : ""}',
                                   style: const TextStyle(fontSize: 11, color: AppTheme.muted),
                                 ),
+                                // F08: a product with no lot is quarantined on the variant itself.
+                                if (!product.hasLotTracking) ...[
+                                  const SizedBox(height: 6),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: [
+                                      _VariantAction(
+                                        icon: Icons.block_rounded,
+                                        label: 'Cách ly',
+                                        color: AppTheme.warning,
+                                        onPressed: () => _quarantineVariant(product, v),
+                                      ),
+                                      _VariantAction(
+                                        icon: Icons.delete_outline_rounded,
+                                        label: 'Tạo phiếu hủy',
+                                        color: AppTheme.danger,
+                                        onPressed: () => _createVariantScrap(product, v),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -360,6 +431,48 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   }).toList(),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A small inline action button used on a product variant row.
+class _VariantAction extends StatelessWidget {
+  const _VariantAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: color),
+            ),
           ],
         ),
       ),
