@@ -177,9 +177,9 @@ class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo ABC + ABC RETAIL COPILOT
+                  // Logo ABC theo chuan Web Dashboard
                   const Center(
-                    child: AbcLogo(showSubtitles: true, size: 54),
+                    child: AbcLogo(showBadge: true, size: 28),
                   ),
                   const SizedBox(height: 20),
 

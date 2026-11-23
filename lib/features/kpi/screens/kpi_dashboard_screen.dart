@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:abc_app/core/theme/app_theme.dart';
+import 'package:abc_app/features/auth/widgets/abc_logo.dart';
 import '../models/kpi_model.dart';
 import '../services/kpi_service.dart';
 
@@ -67,9 +68,15 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'DOANH THU HÔM NAY',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: Colors.white70),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'DOANH THU HÔM NAY',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.8, color: Colors.white70),
+                              ),
+                              const AbcLogo(showBadge: false, size: 16),
+                            ],
                           ),
                           const SizedBox(height: 8),
                           Text(

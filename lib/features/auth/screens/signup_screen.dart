@@ -200,9 +200,9 @@ class _SignupScreenState extends State<SignupScreen> with WidgetsBindingObserver
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo ABC badge
+                  // Logo ABC theo chuan Web Dashboard
                   const Center(
-                    child: AbcLogo(showSubtitles: false, size: 54),
+                    child: AbcLogo(showBadge: true, size: 28),
                   ),
                   const SizedBox(height: 24),
 

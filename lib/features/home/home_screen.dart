@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:abc_app/core/theme/app_theme.dart';
 import 'package:abc_app/features/auth/screens/login_screen.dart';
 import 'package:abc_app/features/auth/services/auth_service.dart';
+import 'package:abc_app/features/auth/widgets/abc_logo.dart';
 import 'package:abc_app/features/products/screens/products_screen.dart';
 import 'package:abc_app/features/alerts/screens/alerts_screen.dart';
 import 'package:abc_app/features/audits/screens/audits_list_screen.dart';
@@ -84,17 +85,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        titleSpacing: 14,
         title: Row(
           children: [
+            const AbcLogo(showBadge: false, size: 20),
+            const SizedBox(width: 12),
             Container(
-              width: 7,
-              height: 7,
-              decoration: const BoxDecoration(
-                color: AppTheme.success,
-                shape: BoxShape.circle,
-              ),
+              width: 1,
+              height: 24,
+              color: AppTheme.border,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,8 +104,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text(
                     _businessName,
                     style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
                       color: AppTheme.primary,
                       letterSpacing: -0.2,
                     ),
@@ -113,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Text(
                     'Không gian vận hành ABC Mobile',
                     style: TextStyle(
-                      fontSize: 11,
+                      fontSize: 10.5,
                       fontWeight: FontWeight.w400,
                       color: AppTheme.muted,
                     ),
