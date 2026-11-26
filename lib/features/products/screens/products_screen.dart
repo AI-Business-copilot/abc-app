@@ -7,6 +7,7 @@ import 'package:abc_app/features/products/screens/barcode_scanner_screen.dart';
 import 'package:abc_app/features/products/screens/barcode_label_screen.dart';
 import 'package:abc_app/features/products/screens/edit_product_screen.dart';
 import 'package:abc_app/features/products/screens/manage_catalog_screen.dart';
+import 'package:abc_app/features/products/screens/product_flower_screen.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({super.key});
@@ -147,6 +148,29 @@ class _ProductsScreenState extends State<ProductsScreen> {
                     ),
                   ),
                   const Spacer(),
+                  InkWell(
+                    onTap: () {
+                      if (_products.isNotEmpty) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProductFlowerScreen(
+                              product: _products.first,
+                              allProducts: _products,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                    child: const Row(
+                      children: [
+                        Icon(Icons.local_florist_rounded, size: 14, color: Color(0xFF065F46)),
+                        SizedBox(width: 4),
+                        Text('Xem Bông hoa', style: TextStyle(fontSize: 12, color: Color(0xFF065F46), fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   InkWell(
                     onTap: () async {
                       await Navigator.push(
@@ -336,6 +360,34 @@ class _ProductsScreenState extends State<ProductsScreen> {
                   Text('Mã: ${product.code}', style: const TextStyle(fontSize: 11.5, color: AppTheme.muted)),
                   const Spacer(),
                   InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProductFlowerScreen(
+                            product: product,
+                            allProducts: _products,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.local_florist_rounded, size: 13, color: Color(0xFFB45309)),
+                          SizedBox(width: 4),
+                          Text('Xem Bông hoa', style: TextStyle(fontSize: 11, color: Color(0xFF92400E), fontWeight: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  InkWell(
                     onTap: () async {
                       final updated = await Navigator.push(
                         context,
@@ -349,7 +401,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
                       children: [
                         Icon(Icons.edit_outlined, size: 14, color: AppTheme.accent),
                         SizedBox(width: 4),
-                        Text('Sửa thông tin / Đổi ảnh', style: TextStyle(fontSize: 12, color: AppTheme.accent, fontWeight: FontWeight.w600)),
+                        Text('Sửa thông tin', style: TextStyle(fontSize: 12, color: AppTheme.accent, fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
