@@ -66,7 +66,7 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF8F9FE),
       body: SafeArea(
         child: _isLoading && _kpi == null
             ? const Center(
@@ -89,35 +89,43 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           const AbcLogo(size: 26),
-                          IconButton(
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            icon: Stack(
+                          Container(
+                            width: 38,
+                            height: 38,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: const [
+                                BoxShadow(color: Color(0x0A000000), blurRadius: 6, offset: Offset(0, 2)),
+                              ],
+                              border: Border.all(color: const Color(0xFFEDF2F7), width: 1),
+                            ),
+                            child: Stack(
+                              alignment: Alignment.center,
                               clipBehavior: Clip.none,
                               children: [
-                                const Icon(Icons.notifications_none_rounded, size: 26, color: Color(0xFF0F172A)),
+                                const Icon(Icons.notifications_none_rounded, size: 21, color: Color(0xFF0F172A)),
                                 Positioned(
-                                  right: 1,
-                                  top: 1,
+                                  right: 9,
+                                  top: 8,
                                   child: Container(
-                                    width: 8,
-                                    height: 8,
+                                    width: 7,
+                                    height: 7,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFC1121F),
+                                      color: const Color(0xFFDC2626),
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.white, width: 1.5),
+                                      border: Border.all(color: Colors.white, width: 1.2),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                            onPressed: () {},
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
 
-                      // 2. Tiêu đề Dashboard chữ lớn, đậm nét
+                      // 2. Tiêu đề Dashboard chữ lớn, đậm nét chuẩn Serif
                       const Text(
                         'Dashboard',
                         style: TextStyle(
@@ -130,11 +138,12 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // 3. Bộ lọc thời gian: THANH TRƯỢT NGANG CÁC PILL (Không dùng dropdown)
+                      // 3. Bộ lọc thời gian: THANH TRƯỢT NGANG CÁC PILL (Kéo trượt qua được)
                       SizedBox(
                         height: 38,
                         child: ListView.separated(
                           scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                           itemCount: _periodOptions.length,
                           separatorBuilder: (context, index) => const SizedBox(width: 8),
                           itemBuilder: (context, index) {
@@ -144,30 +153,47 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
                               onTap: () => setState(() => _selectedPeriod = opt['id']!),
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 180),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: active ? const Color(0xFF0F4C3A) : Colors.white,
+                                  color: active ? const Color(0xFF065F46) : Colors.white,
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                    color: active ? const Color(0xFF0F4C3A) : const Color(0xFFE2E8F0),
+                                    color: active ? const Color(0xFF065F46) : const Color(0xFFE2E8F0),
                                     width: 1.2,
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: active ? const Color(0x260F4C3A) : const Color(0x06000000),
+                                      color: active ? const Color(0x26065F46) : const Color(0x06000000),
                                       blurRadius: active ? 6 : 3,
                                       offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
                                 child: Center(
-                                  child: Text(
-                                    opt['label']!,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                                      color: active ? Colors.white : const Color(0xFF475569),
-                                    ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        opt['label']!,
+                                        style: TextStyle(
+                                          fontFamily: 'serif',
+                                          fontSize: 13,
+                                          fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+                                          color: active ? Colors.white : const Color(0xFF334155),
+                                        ),
+                                      ),
+                                      if (active) ...[
+                                        const SizedBox(width: 6),
+                                        Container(
+                                          width: 6,
+                                          height: 6,
+                                          decoration: const BoxDecoration(
+                                            color: Color(0xFF34D399),
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ),
                               ),
@@ -184,16 +210,21 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
                             width: 7,
                             height: 7,
                             decoration: const BoxDecoration(
-                              color: Color(0xFF10B981),
+                              color: Color(0xFF34D399),
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 7),
                           Text(
                             _isDaily
-                                ? '00:00 - 23:59 • Hôm nay (13/11/2026)'
+                                ? '00:00 - 21:30 • Hôm nay (15/11/2026)'
                                 : 'Toàn thời gian kỳ: $_currentPeriodLabel',
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                              fontFamily: 'serif',
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),
@@ -238,7 +269,7 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
     final orders = _kpi?.todayOrderCount != null && _kpi!.todayOrderCount > 0
         ? _kpi!.todayOrderCount
         : 86;
-    final aov = orders > 0 ? (revenue / orders).round() : 330000;
+    final aov = orders > 0 ? (revenue / orders).round() : 350000;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -248,74 +279,77 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Thẻ 1: Tổng doanh thu (Chiều ngang đồng nhất hoàn toàn với các ô khác)
+              // Thẻ 1: Tổng doanh thu
               _buildCardContainer(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Tổng doanh thu',
-                      style: TextStyle(fontSize: 13.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                      style: TextStyle(fontFamily: 'serif', fontSize: 13.5, color: Color(0xFF475569), fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       _currency.format(revenue),
                       style: const TextStyle(
-                        fontSize: 19,
+                        fontFamily: 'serif',
+                        fontSize: 20.5,
                         fontWeight: FontWeight.w900,
                         color: Color(0xFF0F172A),
                         letterSpacing: -0.4,
                       ),
                     ),
-                    const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        '114% chỉ tiêu',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF047857)),
-                      ),
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      color: const Color(0xFFF1F5F9),
+                    ),
+                    const Text(
+                      '114% chỉ tiêu',
+                      style: TextStyle(fontFamily: 'serif', fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF059669)),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
 
-              // Thẻ 3: Đổi trả (Tiền hoàn dùng pill xám mềm, không bọc đỏ chói)
+              // Thẻ 3: Đổi trả (Tiền hoàn dùng pill hồng/đào nhạt theo mockup)
               _buildCardContainer(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'Đổi trả',
-                      style: TextStyle(fontSize: 13.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                      style: TextStyle(fontFamily: 'serif', fontSize: 13.5, color: Color(0xFF475569), fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 6),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.baseline,
                       textBaseline: TextBaseline.alphabetic,
                       children: const [
-                        Text('03', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFFC1121F))),
+                        Text('03', style: TextStyle(fontFamily: 'serif', fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFFDC2626))),
                         SizedBox(width: 4),
-                        Text('đơn trả', style: TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                        Text('đơn trả', style: TextStyle(fontFamily: 'serif', fontSize: 12, color: Color(0xFFDC2626), fontWeight: FontWeight.w600)),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      color: const Color(0xFFF1F5F9),
+                    ),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Tiền hoàn: ', style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
+                        const Text('Tiền hoàn:', style: TextStyle(fontFamily: 'serif', fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9), // Pill xám nhạt nhẹ nhàng, không bọc đỏ
-                            borderRadius: BorderRadius.circular(6),
+                            color: const Color(0xFFFFE4E6),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Text(
-                            '-1.07M',
-                            style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Color(0xFF334155)),
+                            '-1.67M',
+                            style: TextStyle(fontFamily: 'serif', fontSize: 11.5, fontWeight: FontWeight.w800, color: Color(0xFFDC2626)),
                           ),
                         ),
                       ],
@@ -340,25 +374,30 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
                   children: [
                     const Text(
                       'Hóa đơn hoàn tất',
-                      style: TextStyle(fontSize: 13.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                      style: TextStyle(fontFamily: 'serif', fontSize: 13.5, color: Color(0xFF475569), fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 6),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.baseline,
                       textBaseline: TextBaseline.alphabetic,
                       children: [
-                        Text('$orders', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                        Text('$orders', style: const TextStyle(fontFamily: 'serif', fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
                         const SizedBox(width: 4),
-                        const Text('đơn', style: TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                        const Text('đơn', style: TextStyle(fontFamily: 'serif', fontSize: 13, color: Color(0xFF475569), fontWeight: FontWeight.w600)),
                       ],
                     ),
-                    const SizedBox(height: 8),
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      color: const Color(0xFFF1F5F9),
+                    ),
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('AOV: ', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600)),
+                        const Text('AOV:', style: TextStyle(fontFamily: 'serif', fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
                         Text(
                           _currency.format(aov),
-                          style: const TextStyle(fontSize: 12.5, color: Color(0xFF1E293B), fontWeight: FontWeight.w800),
+                          style: const TextStyle(fontFamily: 'serif', fontSize: 12.5, color: Color(0xFF0F172A), fontWeight: FontWeight.w800),
                         ),
                       ],
                     ),
@@ -371,23 +410,27 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
               _buildCardContainer(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Text(
+                  children: [
+                    const Text(
                       'Sản phẩm đã bán',
-                      style: TextStyle(fontSize: 13.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                      style: TextStyle(fontFamily: 'serif', fontSize: 13.5, color: Color(0xFF475569), fontWeight: FontWeight.w600),
                     ),
-                    SizedBox(height: 6),
+                    const SizedBox(height: 6),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.baseline,
                       textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Text('142', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                      children: const [
+                        Text('142', style: TextStyle(fontFamily: 'serif', fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
                         SizedBox(width: 4),
-                        Text('sp', style: TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                        Text('sp', style: TextStyle(fontFamily: 'serif', fontSize: 13, color: Color(0xFF475569), fontWeight: FontWeight.w600)),
                       ],
                     ),
-                    SizedBox(height: 8),
-                    Text('Xuất quầy & online', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8), fontWeight: FontWeight.w500)),
+                    Container(
+                      height: 1,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      color: Colors.transparent,
+                    ),
+                    const SizedBox(height: 18),
                   ],
                 ),
               ),
@@ -430,55 +473,61 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
-                children: [
-                  const Icon(Icons.bar_chart_rounded, size: 20, color: Color(0xFF0F4C3A)),
-                  const SizedBox(width: 7),
+                children: const [
+                  Icon(Icons.bar_chart_rounded, size: 20, color: Color(0xFF065F46)),
+                  SizedBox(width: 7),
                   Text(
-                    _isDaily ? 'Doanh thu theo giờ' : 'Doanh thu theo ngày',
-                    style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                    'Doanh thu theo giờ',
+                    style: TextStyle(fontFamily: 'serif', fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  _isDaily ? 'Hôm nay' : _currentPeriodLabel,
-                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
-                ),
-              ),
+              
             ],
           ),
           const SizedBox(height: 3),
-          Text(
-            _isDaily ? 'Đỉnh điểm lúc 20:00 (Buổi tối)' : 'Đỉnh điểm ngày 15 (Giữa kỳ)',
-            style: const TextStyle(fontSize: 12.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+          const Text(
+            'Đỉnh điểm lúc 20:00 (Buổi tối)',
+            style: TextStyle(fontFamily: 'serif', fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 14),
 
-          // Tooltip nổi trên đỉnh cột cao nhất
+          // Tooltip nổi trên đỉnh cột cao nhất kèm mũi tên trỏ xuống
           Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F172A),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [BoxShadow(color: Color(0x24000000), blurRadius: 8, offset: Offset(0, 2))],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF34D399), shape: BoxShape.circle)),
-                  const SizedBox(width: 7),
-                  Text(
-                    _isDaily ? 'Đỉnh 20:00: 6.850.000 đ (22 đơn)' : 'Đỉnh ngày 15: 8.450.000 đ (31 đơn)',
-                    style: const TextStyle(fontSize: 12, color: Colors.white, fontWeight: FontWeight.w700),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [BoxShadow(color: Color(0x24000000), blurRadius: 8, offset: Offset(0, 2))],
                   ),
-                ],
-              ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(width: 6, height: 6, decoration: const BoxDecoration(color: Color(0xFF34D399), shape: BoxShape.circle)),
+                      const SizedBox(width: 8),
+                      Text(
+                        _isDaily ? 'Đỉnh 20:00: ' : 'Đỉnh ngày 15: ',
+                        style: const TextStyle(fontFamily: 'serif', fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
+                      ),
+                      Text(
+                        _isDaily ? '6.850.000 đ' : '8.450.000 đ',
+                        style: const TextStyle(fontFamily: 'serif', fontSize: 12, color: Color(0xFF34D399), fontWeight: FontWeight.w900),
+                      ),
+                      Text(
+                        _isDaily ? ' (22 đơn)' : ' (31 đơn)',
+                        style: const TextStyle(fontFamily: 'serif', fontSize: 12, color: Colors.white, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ),
+                CustomPaint(
+                  size: const Size(10, 5),
+                  painter: _TrianglePainter(),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 14),
@@ -492,6 +541,7 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
               children: bars.map((b) {
                 final isPeak = b['isPeak'] as bool;
                 final height = 95.0 * (b['val'] as double);
+                final isDarkBar = isPeak || b['label'] == '12h' || b['label'] == '18h';
                 return Column(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -499,17 +549,30 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
                       width: 24,
                       height: height,
                       decoration: BoxDecoration(
-                        color: isPeak ? const Color(0xFF0F4C3A) : const Color(0xFF86EFAC),
+                        color: isDarkBar ? const Color(0xFF065F46) : const Color(0xFF6EE7B7),
                         borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
                       ),
+                      child: isPeak
+                          ? Align(
+                              alignment: Alignment.topCenter,
+                              child: Container(
+                                height: 5,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF86EFAC),
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
+                                ),
+                              ),
+                            )
+                          : null,
                     ),
                     const SizedBox(height: 6),
                     Text(
                       b['label'] as String,
                       style: TextStyle(
+                        fontFamily: 'serif',
                         fontSize: 11,
                         fontWeight: isPeak ? FontWeight.w900 : FontWeight.w600,
-                        color: isPeak ? const Color(0xFF0F4C3A) : const Color(0xFF94A3B8),
+                        color: isPeak ? const Color(0xFF065F46) : const Color(0xFF64748B),
                       ),
                     ),
                   ],
@@ -518,6 +581,29 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildChartHeaderPill(String periodId, String label) {
+    final active = _selectedPeriod == periodId;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedPeriod = periodId),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF0F4C3A) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11.5,
+            fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+            color: active ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
       ),
     );
   }
@@ -532,29 +618,40 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
-                children: const [
-                  Icon(Icons.local_shipping_outlined, size: 20, color: Color(0xFF0D9488)),
-                  SizedBox(width: 7),
-                  Text('Đơn mua hàng NCC (PO)', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEEF2FF),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.local_shipping_outlined, size: 18, color: Color(0xFF065F46)),
+                  ),
+                  const SizedBox(width: 9),
+                  const Text(
+                    'Đơn mua hàng NCC (PO)',
+                    style: TextStyle(fontFamily: 'serif', fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                  ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3.5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFCCFBF1),
+                  color: const Color(0xFFDCFCE7),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text('4 phiếu', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: Color(0xFF0F766E))),
+                child: const Text('4 phiếu', style: TextStyle(fontFamily: 'serif', fontSize: 11.5, fontWeight: FontWeight.w900, color: Color(0xFF15803D))),
               ),
             ],
           ),
           const SizedBox(height: 14),
 
-          // 3 Dòng trạng thái
+          // 3 Dòng trạng thái (bo góc mềm mại nền xám/xanh nhạt)
           _buildPoRow(
             dotColor: const Color(0xFFB45309),
             title: '2 Đơn chờ giao từ NCC',
-            rightWidget: const Text('124.000.000 đ', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF1E293B))),
+            rightWidget: const Text('124.000.000 đ', style: TextStyle(fontFamily: 'serif', fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF92400E))),
           ),
           const SizedBox(height: 8),
           _buildPoRow(
@@ -565,26 +662,22 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
           _buildPoRow(
             dotColor: const Color(0xFF16A34A),
             title: '1 Đã hoàn tất nhập kho sáng nay',
-            rightWidget: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
-              decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(6)),
-              child: const Text('Đạt 100% SKU', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF15803D))),
-            ),
+            rightWidget: const Text('Đủ 100% SKU', style: TextStyle(fontFamily: 'serif', fontSize: 11.5, fontWeight: FontWeight.w800, color: Color(0xFF15803D))),
           ),
           const SizedBox(height: 14),
 
           // Nút liên kết theo dõi chi tiết
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 10),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
+              color: const Color(0xFFEEF2FF),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Center(
               child: Text(
                 'Theo dõi chi tiết 4 đơn PO  ➔',
-                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF334155)),
+                style: TextStyle(fontFamily: 'serif', fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF065F46)),
               ),
             ),
           ),
@@ -595,9 +688,9 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
 
   Widget _buildPoRow({required Color dotColor, required String title, Widget? rightWidget}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: const Color(0xFFF4F6FC),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -607,7 +700,7 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
             children: [
               Container(width: 7, height: 7, decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle)),
               const SizedBox(width: 9),
-              Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF334155))),
+              Text(title, style: const TextStyle(fontFamily: 'serif', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E293B))),
             ],
           ),
           ?rightWidget,
@@ -624,31 +717,36 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
         children: [
           Row(
             children: const [
-              Icon(Icons.pie_chart_outline_rounded, size: 20, color: Color(0xFF0F4C3A)),
+              Icon(Icons.pie_chart_outline_rounded, size: 20, color: Color(0xFF065F46)),
               SizedBox(width: 7),
-              Text('Tỷ trọng doanh thu theo biến thể', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+              Text(
+                'Tỷ trọng doanh thu theo biến thể',
+                style: TextStyle(fontFamily: 'serif', fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+              ),
             ],
           ),
           const SizedBox(height: 18),
 
-          // Donut Chart: Không ghi doanh thu thuần, chỉ ghi TỔNG và 28.45M
+          // Donut Chart: Có TỔNG, 28.45M và 100% Thuần ở tâm
           Center(
             child: SizedBox(
-              width: 150,
-              height: 150,
+              width: 155,
+              height: 155,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   CustomPaint(
-                    size: const Size(150, 150),
+                    size: const Size(155, 155),
                     painter: _DonutChartPainter(),
                   ),
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
-                      Text('TỔNG', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF94A3B8), letterSpacing: 1.0)),
+                      Text('TỔNG', style: TextStyle(fontFamily: 'serif', fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF64748B), letterSpacing: 0.8)),
                       SizedBox(height: 2),
-                      Text('28.45M', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                      Text('28.45M', style: TextStyle(fontFamily: 'serif', fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                      SizedBox(height: 2),
+                      Text('100% Thuần', style: TextStyle(fontFamily: 'serif', fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF065F46))),
                     ],
                   ),
                 ],
@@ -662,17 +760,18 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
             children: [
               Expanded(
                 child: _buildLegendItem(
-                  color: const Color(0xFF0F4C3A),
+                  color: const Color(0xFF065F46),
                   title: 'Polo Pima Navy-L',
-                  subtitle: '42% • 11.95M',
+                  subtitle: '42% • 11.950k',
+                  isAccent: true,
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _buildLegendItem(
-                  color: const Color(0xFF10B981),
+                  color: const Color(0xFF6EE7B7),
                   title: 'Serum B5 30ml Std',
-                  subtitle: '28% • 7.96M',
+                  subtitle: '28% • 7.960k',
                 ),
               ),
             ],
@@ -682,9 +781,10 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
             children: [
               Expanded(
                 child: _buildLegendItem(
-                  color: const Color(0xFFC1121F),
+                  color: const Color(0xFFDC2626),
                   title: 'Quần Tây Đen-31',
-                  subtitle: '18% • 5.12M',
+                  subtitle: '18% • 5.120k',
+                  isRed: true,
                 ),
               ),
               const SizedBox(width: 10),
@@ -692,7 +792,8 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
                 child: _buildLegendItem(
                   color: const Color(0xFFB45309),
                   title: 'Biến thể khác',
-                  subtitle: '12% • 3.42M',
+                  subtitle: '12% • 3.420k',
+                  isAmber: true,
                 ),
               ),
             ],
@@ -702,10 +803,22 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
     );
   }
 
-  Widget _buildLegendItem({required Color color, required String title, required String subtitle}) {
+  Widget _buildLegendItem({
+    required Color color,
+    required String title,
+    required String subtitle,
+    bool isAccent = false,
+    bool isRed = false,
+    bool isAmber = false,
+  }) {
+    Color subColor = const Color(0xFF64748B);
+    if (isAccent) subColor = const Color(0xFF065F46);
+    if (isRed) subColor = const Color(0xFFDC2626);
+    if (isAmber) subColor = const Color(0xFFB45309);
+
     return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(10)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(color: const Color(0xFFF4F6FC), borderRadius: BorderRadius.circular(10)),
       child: Row(
         children: [
           Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
@@ -714,9 +827,9 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)), overflow: TextOverflow.ellipsis),
+                Text(title, style: const TextStyle(fontFamily: 'serif', fontSize: 12.5, fontWeight: FontWeight.w700, color: Color(0xFF1E293B)), overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                Text(subtitle, style: TextStyle(fontFamily: 'serif', fontSize: 11, color: subColor, fontWeight: FontWeight.w800)),
               ],
             ),
           ),
@@ -725,7 +838,7 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
     );
   }
 
-  // Section: Tồn kho nhiều nhất (Tabs: biến thể, danh mục, mẫu cha, giá vốn)
+  // Section: Tồn kho nhiều nhất (Tabs: biến thể, danh mục, mẫu cha, giá vốn, kéo trượt qua được)
   Widget _buildTopInventoryCard() {
     final items = {
       'variant': [
@@ -748,7 +861,19 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
         {'name': 'Quần Tây Slimfit Form Ý (Đen / 31)', 'parent': 'Quần Tây Công Sở', 'category': 'Thời trang', 'qty': '195 cái', 'cogs': '46.800.000 đ', 'pct': 0.72},
         {'name': 'Serum B5 Phục Hồi (30ml Std)', 'parent': 'Serum B5', 'category': 'Mỹ phẩm', 'qty': '280 chai', 'cogs': '21.000.000 đ', 'pct': 0.45},
       ],
-    }[_inventoryFilter]!;
+      'low_stock': [
+        {'name': 'Áo Sơ Mi Trắng Oxford (M)', 'parent': 'Sơ Mi Nam', 'category': 'Thời trang', 'qty': '12 cái', 'cogs': '2.400.000 đ', 'pct': 0.15},
+        {'name': 'Kem Dưỡng Ẩm Ceramide (50ml)', 'parent': 'Kem Dưỡng', 'category': 'Mỹ phẩm', 'qty': '8 hũ', 'cogs': '1.800.000 đ', 'pct': 0.10},
+        {'name': 'Cà vạt Lụa Cao Cấp (Navy)', 'parent': 'Phụ kiện', 'category': 'Thời trang', 'qty': '5 cái', 'cogs': '950.000 đ', 'pct': 0.08},
+      ],
+      'restocking': [
+        {'name': 'Áo Thun Basic Cotton 220gsm', 'parent': 'Áo Thun Nam', 'category': 'Thời trang', 'qty': '500 cái', 'cogs': '45.000.000 đ', 'pct': 0.95},
+        {'name': 'Tẩy Trang Rau Má (150ml)', 'parent': 'Tẩy Trang', 'category': 'Mỹ phẩm', 'qty': '350 chai', 'cogs': '38.500.000 đ', 'pct': 0.75},
+        {'name': 'Quần Kaki Ống Đứng', 'parent': 'Quần Nam', 'category': 'Thời trang', 'qty': '220 cái', 'cogs': '33.000.000 đ', 'pct': 0.55},
+      ],
+    }[_inventoryFilter] ?? [
+      {'name': 'Áo Polo Pima Cotton (Navy / L)', 'parent': 'Áo Polo Nam', 'category': 'Thời trang', 'qty': '340 cái', 'cogs': '61.2tr', 'pct': 0.85},
+    ];
 
     return _buildCardContainer(
       child: Column(
@@ -763,9 +888,10 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
           ),
           const SizedBox(height: 12),
 
-          // 4 Filter Pills: SKU Biến thể, Danh mục, Mẫu cha (Template), Giá vốn
+          // Filter Pills: Kéo trượt ngang mượt mà (Horizontal Scrollable)
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
             child: Row(
               children: [
                 _buildFilterPill('variant', 'SKU Biến thể'),
@@ -775,15 +901,24 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
                 _buildFilterPill('template', 'Mẫu cha (Template)'),
                 const SizedBox(width: 8),
                 _buildFilterPill('cogs', 'Giá vốn'),
+                const SizedBox(width: 8),
+                _buildFilterPill('low_stock', 'Sắp hết hàng'),
+                const SizedBox(width: 8),
+                _buildFilterPill('restocking', 'Đang nhập hàng'),
               ],
             ),
           ),
           const SizedBox(height: 14),
 
-          // Danh sách các mục có progress bar
+          // Danh sách các mục có progress bar (Mỗi mục là một Container bo góc nền xám nhạt theo mockup)
           ...items.map((it) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 14.0),
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10.0),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F6FC),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -793,33 +928,32 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
                       Expanded(
                         child: Text(
                           it['name'] as String,
-                          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                          style: const TextStyle(fontFamily: 'serif', fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      Text(it['qty'] as String, style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w900, color: Color(0xFF0F4C3A))),
+                      Text(it['qty'] as String, style: const TextStyle(fontFamily: 'serif', fontSize: 13.5, fontWeight: FontWeight.w900, color: Color(0xFF065F46))),
                     ],
                   ),
                   const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Kế bên tên mẫu cha là tên danh mục
                       Text(
                         'Mẫu cha: ${it['parent']} • ${it['category']}',
-                        style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                        style: const TextStyle(fontFamily: 'serif', fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
                       ),
-                      Text('Vốn: ${it['cogs']}', style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600)),
+                      Text('Vốn: ${it['cogs']}', style: const TextStyle(fontFamily: 'serif', fontSize: 11.5, color: Color(0xFF475569), fontWeight: FontWeight.w600)),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(5),
+                    borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: it['pct'] as double,
-                      minHeight: 5.5,
-                      backgroundColor: const Color(0xFFF1F5F9),
-                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF0F4C3A)),
+                      minHeight: 6,
+                      backgroundColor: const Color(0xFFE2E8F0),
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF065F46)),
                     ),
                   ),
                 ],
@@ -835,18 +969,20 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
     final active = _inventoryFilter == id;
     return GestureDetector(
       onTap: () => setState(() => _inventoryFilter = id),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: active ? const Color(0xFF0F4C3A) : const Color(0xFFF1F5F9),
+          color: active ? const Color(0xFF065F46) : const Color(0xFFEEF2FF),
           borderRadius: BorderRadius.circular(18),
         ),
         child: Text(
           label,
           style: TextStyle(
+            fontFamily: 'serif',
             fontSize: 12,
             fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-            color: active ? Colors.white : const Color(0xFF475569),
+            color: active ? Colors.white : const Color(0xFF334155),
           ),
         ),
       ),
@@ -866,84 +1002,121 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
                 children: [
                   Icon(Icons.emoji_events_outlined, size: 20, color: Color(0xFFD97706)),
                   SizedBox(width: 7),
-                  Text('Top sản phẩm bán chạy', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800, color: Color(0xFF0F172A))),
+                  Text('Top sản phẩm bán chạy', style: TextStyle(fontFamily: 'serif', fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
                 ],
               ),
-              Text('Tất cả (28)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: Color(0xFF0F4C3A))),
+              Text('Tất cả (28)', style: TextStyle(fontFamily: 'serif', fontSize: 12.5, fontWeight: FontWeight.w800, color: Color(0xFF065F46))),
             ],
           ),
           const SizedBox(height: 12),
 
-          // 3 Tabs: Doanh thu | Số lượng | Lượt đặt
-          Container(
-            padding: const EdgeInsets.all(2.5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                _buildSubTab('revenue', 'Doanh thu'),
-                _buildSubTab('quantity', 'Số lượng'),
-                _buildSubTab('orders', 'Lượt đặt'),
-              ],
+          // Tabs lọc: Doanh thu | Số lượng | Lượt đặt | Lợi nhuận | Tỷ lệ hoàn (Kéo trượt ngang qua được)
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+            child: Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEEF2FF),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  _buildSubTab('revenue', 'Doanh thu'),
+                  const SizedBox(width: 4),
+                  _buildSubTab('quantity', 'Số lượng'),
+                  const SizedBox(width: 4),
+                  _buildSubTab('orders', 'Lượt đặt'),
+                  const SizedBox(width: 4),
+                  _buildSubTab('profit', 'Lợi nhuận'),
+                  const SizedBox(width: 4),
+                  _buildSubTab('return_rate', 'Tỷ lệ hoàn'),
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 12),
 
-          // Danh sách #1, #2, #3
-          _buildRankItem(
-            rank: '#1',
-            rankColor: const Color(0xFFFEF3C7),
-            rankTextColor: const Color(0xFF92400E),
-            name: 'Áo Polo Pima Cotton Cao Cấp',
-            sub: '48 lượt bán • 34 sản phẩm',
-            revenue: '11.950.000 đ',
-            hasBadge: true,
-          ),
-          const SizedBox(height: 9),
-          _buildRankItem(
-            rank: '#2',
-            rankColor: const Color(0xFFF1F5F9),
-            rankTextColor: const Color(0xFF475569),
-            name: 'Serum Dưỡng Ẩm Phục Hồi B5',
-            sub: '32 lượt bán • 28 chai',
-            revenue: '7.900.000 đ',
-          ),
-          const SizedBox(height: 9),
-          _buildRankItem(
-            rank: '#3',
-            rankColor: const Color(0xFFFFEDD5),
-            rankTextColor: const Color(0xFF9A3412),
-            name: 'Quần Tây Nam Slimfit Co Giãn',
-            sub: '24 lượt bán • 19 sản phẩm',
-            revenue: '5.120.000 đ',
-          ),
+          // Danh sách #1, #2, #3 linh hoạt theo bộ lọc đã chọn
+          ..._getTopProductsList().asMap().entries.map((entry) {
+            final idx = entry.key;
+            final item = entry.value;
+            final rankStr = '#${idx + 1}';
+            final rankColors = [
+              [const Color(0xFFFDE68A), const Color(0xFF92400E)],
+              [const Color(0xFFDBEAFE), const Color(0xFF1E3A8A)],
+              [const Color(0xFFFFEDD5), const Color(0xFF9A3412)],
+            ];
+            final colorPair = idx < 3 ? rankColors[idx] : rankColors[1];
+            return Padding(
+              padding: EdgeInsets.only(bottom: idx == 2 ? 0 : 9),
+              child: _buildRankItem(
+                rank: rankStr,
+                rankColor: colorPair[0],
+                rankTextColor: colorPair[1],
+                name: item['name'] as String,
+                sub: item['sub'] as String,
+                revenue: item['rev'] as String,
+                hasBadge: item['badge'] as bool? ?? false,
+              ),
+            );
+          }),
         ],
       ),
     );
   }
 
+  List<Map<String, dynamic>> _getTopProductsList() {
+    final data = {
+      'revenue': [
+        {'name': 'Áo Polo Pima Cotton Cao Cấp', 'sub': '48 lượt bán • 34 sản phẩm', 'rev': '11.950.000 đ', 'badge': true},
+        {'name': 'Serum Dưỡng Ẩm Phục Hồi B5', 'sub': '52 lượt bán • 28 chai', 'rev': '7.960.000 đ', 'badge': false},
+        {'name': 'Quần Tây Nam Slimfit Co Giãn', 'sub': '24 lượt bán • 19 sản phẩm', 'rev': '5.120.000 đ', 'badge': false},
+      ],
+      'quantity': [
+        {'name': 'Serum Dưỡng Ẩm Phục Hồi B5', 'sub': '52 lượt bán • 84 chai xuất kho', 'rev': '7.960.000 đ', 'badge': true},
+        {'name': 'Áo Thun Basic 100% Cotton', 'sub': '68 lượt bán • 72 sản phẩm', 'rev': '4.320.000 đ', 'badge': false},
+        {'name': 'Áo Polo Pima Cotton Cao Cấp', 'sub': '48 lượt bán • 34 sản phẩm', 'rev': '11.950.000 đ', 'badge': false},
+      ],
+      'orders': [
+        {'name': 'Áo Thun Basic 100% Cotton', 'sub': '68 lượt đặt • 72 sản phẩm', 'rev': '4.320.000 đ', 'badge': true},
+        {'name': 'Áo Polo Pima Cotton Cao Cấp', 'sub': '48 lượt đặt • 34 sản phẩm', 'rev': '11.950.000 đ', 'badge': false},
+        {'name': 'Serum Dưỡng Ẩm Phục Hồi B5', 'sub': '32 lượt đặt • 28 chai', 'rev': '7.960.000 đ', 'badge': false},
+      ],
+      'profit': [
+        {'name': 'Áo Polo Pima Cotton Cao Cấp', 'sub': 'Biên lãi 42% • Vốn 6.931.000 đ', 'rev': '+5.019.000 đ', 'badge': true},
+        {'name': 'Serum Dưỡng Ẩm Phục Hồi B5', 'sub': 'Biên lãi 38% • Vốn 4.898.000 đ', 'rev': '+3.024.000 đ', 'badge': false},
+        {'name': 'Quần Tây Nam Slimfit Co Giãn', 'sub': 'Biên lãi 35% • Vốn 3.328.000 đ', 'rev': '+1.792.000 đ', 'badge': false},
+      ],
+      'return_rate': [
+        {'name': 'Quần Tây Nam Slimfit Co Giãn', 'sub': 'Tỷ lệ hoàn cực thấp: 1.2% (1 đơn)', 'rev': '5.120.000 đ', 'badge': true},
+        {'name': 'Serum Dưỡng Ẩm Phục Hồi B5', 'sub': 'Tỷ lệ hoàn cực thấp: 1.5% (1 chai)', 'rev': '7.960.000 đ', 'badge': false},
+        {'name': 'Áo Polo Pima Cotton Cao Cấp', 'sub': 'Tỷ lệ hoàn kiểm soát: 2.1% (2 cái)', 'rev': '11.950.000 đ', 'badge': false},
+      ],
+    };
+    return data[_topProductsFilter] ?? data['revenue']!;
+  }
+
   Widget _buildSubTab(String id, String label) {
     final active = _topProductsFilter == id;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _topProductsFilter = id),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          decoration: BoxDecoration(
-            color: active ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-            boxShadow: active ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 4)] : null,
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-                color: active ? const Color(0xFF0F172A) : const Color(0xFF64748B),
-              ),
+    return GestureDetector(
+      onTap: () => setState(() => _topProductsFilter = id),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6.5),
+        decoration: BoxDecoration(
+          color: active ? Colors.white : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: active ? const [BoxShadow(color: Color(0x10000000), blurRadius: 4, offset: Offset(0, 1))] : null,
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'serif',
+              fontSize: 12,
+              fontWeight: active ? FontWeight.w800 : FontWeight.w600,
+              color: active ? const Color(0xFF065F46) : const Color(0xFF64748B),
             ),
           ),
         ),
@@ -963,7 +1136,7 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: const Color(0xFFF4F6FC),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -975,7 +1148,7 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
             child: Center(
               child: Text(
                 rank,
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: rankTextColor),
+                style: TextStyle(fontFamily: 'serif', fontSize: 11, fontWeight: FontWeight.w900, color: rankTextColor),
               ),
             ),
           ),
@@ -984,11 +1157,11 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
+              color: const Color(0xFFCBD5E1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Center(
-              child: Text('img', style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.w700)),
+              child: Text('img', style: TextStyle(fontFamily: 'serif', fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w700)),
             ),
           ),
           const SizedBox(width: 10),
@@ -998,20 +1171,20 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
+                  style: const TextStyle(fontFamily: 'serif', fontSize: 13.5, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
                   overflow: TextOverflow.ellipsis,
                 ),
-                Text(sub, style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
+                Text(sub, style: const TextStyle(fontFamily: 'serif', fontSize: 11, color: Color(0xFF64748B))),
                 const SizedBox(height: 2),
                 Text(
                   revenue,
-                  style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w900, color: Color(0xFF0F4C3A)),
+                  style: const TextStyle(fontFamily: 'serif', fontSize: 13, fontWeight: FontWeight.w900, color: Color(0xFF065F46)),
                 ),
               ],
             ),
           ),
           if (hasBadge)
-            const Icon(Icons.verified_rounded, size: 18, color: Color(0xFF0F766E)),
+            const Icon(Icons.verified_rounded, size: 18, color: Color(0xFF065F46)),
         ],
       ),
     );
@@ -1024,14 +1197,33 @@ class _KpiDashboardScreenState extends State<KpiDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
+        border: Border.all(color: const Color(0xFFE8EEF5), width: 1.0),
         boxShadow: const [
-          BoxShadow(color: Color(0x06000000), blurRadius: 8, offset: Offset(0, 2)),
+          BoxShadow(color: Color(0x0A0F172A), blurRadius: 10, offset: Offset(0, 3)),
         ],
       ),
       child: child,
     );
   }
+}
+
+/// Mũi tên tam giác trỏ xuống cho tooltip
+class _TrianglePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF1E293B)
+      ..style = PaintingStyle.fill;
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..lineTo(size.width, 0)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 /// Painter vẽ Donut Chart 4 lát màu
@@ -1047,7 +1239,7 @@ class _DonutChartPainter extends CustomPainter {
       ..strokeWidth = strokeWidth;
 
     // 42% Forest Green
-    paint.color = const Color(0xFF0F4C3A);
+    paint.color = const Color(0xFF065F46);
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -math.pi / 2,
@@ -1057,7 +1249,7 @@ class _DonutChartPainter extends CustomPainter {
     );
 
     // 28% Mint Green
-    paint.color = const Color(0xFF10B981);
+    paint.color = const Color(0xFF6EE7B7);
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -math.pi / 2 + 2 * math.pi * 0.42,
@@ -1067,7 +1259,7 @@ class _DonutChartPainter extends CustomPainter {
     );
 
     // 18% Crimson Red
-    paint.color = const Color(0xFFC1121F);
+    paint.color = const Color(0xFFDC2626);
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -math.pi / 2 + 2 * math.pi * 0.70,

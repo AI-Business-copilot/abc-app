@@ -143,10 +143,10 @@ class _HomeScreenState extends State<HomeScreen> {
         child: BottomNavigationBar(
           backgroundColor: AppTheme.surface,
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppTheme.accent,
-          unselectedItemColor: AppTheme.muted,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 10),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 10),
+          selectedItemColor: const Color(0xFF065F46),
+          unselectedItemColor: const Color(0xFF64748B),
+          selectedLabelStyle: const TextStyle(fontFamily: 'serif', fontWeight: FontWeight.w800, fontSize: 11),
+          unselectedLabelStyle: const TextStyle(fontFamily: 'serif', fontWeight: FontWeight.w500, fontSize: 10.5),
           elevation: 0,
           currentIndex: _currentIndex,
           onTap: (idx) {
