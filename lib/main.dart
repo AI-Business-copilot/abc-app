@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/config/app_config.dart';
@@ -6,11 +7,25 @@ import 'features/auth/screens/login_screen.dart';
 import 'features/auth/services/auth_service.dart';
 import 'features/home/home_screen.dart';
 
+/// Cho phép kéo cuộn ngang bằng cả chuột, trackpad và cảm ứng trên mọi nền tảng
+class AppScrollBehavior extends MaterialScrollBehavior {
+  const AppScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus,
+  };
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
     url: AppConfig.supabaseUrl,
+    // ignore: deprecated_member_use
     anonKey: AppConfig.supabaseAnonKey,
   );
 
@@ -27,6 +42,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'ABC Business Copilot',
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const AppScrollBehavior(),
       theme: AppTheme.lightTheme,
       home: currentSession != null
           ? const _AuthGuardScreen()

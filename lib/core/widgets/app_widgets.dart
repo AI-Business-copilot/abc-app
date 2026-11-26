@@ -46,6 +46,7 @@ class FilterChipBar<T> extends StatelessWidget {
       height: 36,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: options.length,
         separatorBuilder: (_, _) => const SizedBox(width: 8),
