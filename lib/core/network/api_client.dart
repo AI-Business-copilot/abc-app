@@ -28,8 +28,11 @@ class ApiClient {
     dio = Dio(
       BaseOptions(
         baseUrl: baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
+        // Server giữ request tới ~6s khi Supabase Auth chậm (3s x 2 lần thử).
+        // Client phải chờ lâu hơn server, nếu không nó tự cắt trước và nuốt mất
+        // thông báo lỗi thật (trước đây cả hai đều đặt 10s).
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 25),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
