@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AppConfig {
+  /// Set for a physical device or a hosted backend, including the /api suffix.
+  static const String apiBaseUrlOverride = String.fromEnvironment(
+    'API_BASE_URL',
+  );
   static const String supabaseUrl = 'https://vhivkicmqwjiypvbssbv.supabase.co';
   static const String supabaseAnonKey =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoaXZraWNtcXdqaXlwdmJzc2J2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIzODM2MTUsImV4cCI6MjEwNzk1OTYxNX0.HubY19CKmXVkWdac0Ngs989MAZZ0azfrA1P_OmBEmhc';

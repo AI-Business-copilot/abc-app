@@ -18,7 +18,9 @@ class ApiClient {
     //    - Emulator Android luôn truy cập host qua 10.0.2.2:5000 (đây là loopback alias của Android SDK)
     //    - Thiết bị thật mới cần IP LAN (192.168.1.40:5000)
     final String baseUrl;
-    if (kIsWeb || !Platform.isAndroid) {
+    if (AppConfig.apiBaseUrlOverride.isNotEmpty) {
+      baseUrl = AppConfig.apiBaseUrlOverride;
+    } else if (kIsWeb || !Platform.isAndroid) {
       baseUrl = AppConfig.apiBaseUrlLocal;
     } else {
       // Mặc định cho Android dùng 10.0.2.2 (hoạt động chuẩn xác trên mọi máy ảo)
@@ -60,6 +62,8 @@ class ApiClient {
           // tự động thử lại với IP LAN (192.168.1.40)
           if (!kIsWeb &&
               Platform.isAndroid &&
+              AppConfig.apiBaseUrlOverride.isEmpty &&
+              error.requestOptions.method == 'GET' &&
               error.requestOptions.baseUrl == AppConfig.apiBaseUrlEmulator &&
               (error.type == DioExceptionType.connectionTimeout ||
                   error.type == DioExceptionType.connectionError)) {
@@ -67,6 +71,8 @@ class ApiClient {
               final newOptions = error.requestOptions;
               newOptions.baseUrl = AppConfig.apiBaseUrlLan;
               final response = await dio.fetch(newOptions);
+              // Keep subsequent writes on the reachable host without retrying them.
+              dio.options.baseUrl = AppConfig.apiBaseUrlLan;
               return handler.resolve(response);
             } catch (_) {
               // Bỏ qua nếu fallback cũng fail

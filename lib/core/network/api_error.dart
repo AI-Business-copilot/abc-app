@@ -7,6 +7,9 @@ String apiErrorMessage(Object error) {
     if (data is Map && data['message'] != null) {
       return data['message'].toString();
     }
+    if (data is Map && data['error'] is String) {
+      return data['error'] as String;
+    }
     if (error.response != null) {
       return 'Lỗi ${error.response!.statusCode} từ máy chủ.';
     }

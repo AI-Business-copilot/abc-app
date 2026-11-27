@@ -6,6 +6,8 @@ import 'package:abc_app/features/products/screens/products_screen.dart';
 import 'package:abc_app/features/alerts/screens/alerts_screen.dart';
 import 'package:abc_app/features/audits/screens/audits_list_screen.dart';
 import 'package:abc_app/features/lots/screens/lots_and_scrap_screen.dart';
+import 'package:abc_app/features/purchases/screens/purchases_screen.dart';
+import 'package:abc_app/features/sales/screens/sales_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,10 +20,13 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   String _businessName = 'Cửa hàng';
   final _authService = AuthService();
+  final Set<int> _visited = {0};
 
   final List<Widget> _screens = [
     const ProductsScreen(), // MOB-02
-    const AlertsScreen(),   // MOB-05
+    const SalesScreen(), // F04
+    const PurchasesScreen(), // F03
+    const AlertsScreen(), // MOB-05
     const AuditsListScreen(), // F07
     const LotsAndScrapScreen(), // F08
   ];
@@ -46,8 +51,13 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: const Text('Đăng xuất', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-        content: const Text('Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này?'),
+        title: const Text(
+          'Đăng xuất',
+          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
+        content: const Text(
+          'Bạn có chắc chắn muốn đăng xuất khỏi tài khoản này?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -68,9 +78,9 @@ class _HomeScreenState extends State<HomeScreen> {
     if (confirmed == true) {
       await _authService.signOut();
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
     }
   }
 
@@ -103,36 +113,64 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout_rounded, size: 20, color: AppTheme.muted),
+            icon: const Icon(
+              Icons.logout_rounded,
+              size: 20,
+              color: AppTheme.muted,
+            ),
             tooltip: 'Đăng xuất',
             onPressed: _handleSignOut,
           ),
           const SizedBox(width: 4),
         ],
       ),
-      body: _screens[_currentIndex],
+      body: IndexedStack(
+        index: _currentIndex,
+        children: [
+          for (var i = 0; i < _screens.length; i++)
+            _visited.contains(i) ? _screens[i] : const SizedBox.shrink(),
+        ],
+      ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: AppTheme.border, width: 1)),
         ),
         child: BottomNavigationBar(
+          type: BottomNavigationBarType.fixed,
           backgroundColor: AppTheme.surface,
           selectedItemColor: AppTheme.primary,
           unselectedItemColor: AppTheme.muted,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12),
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 10,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 10,
+          ),
           elevation: 0,
           currentIndex: _currentIndex,
           onTap: (idx) {
             setState(() {
               _currentIndex = idx;
+              _visited.add(idx);
             });
           },
           items: const [
             BottomNavigationBarItem(
               icon: Icon(Icons.inventory_2_outlined, size: 20),
               activeIcon: Icon(Icons.inventory_2, size: 20),
-              label: 'Kho & Hàng',
+              label: 'Kho',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.point_of_sale_outlined, size: 20),
+              activeIcon: Icon(Icons.point_of_sale, size: 20),
+              label: 'Bán hàng',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.local_shipping_outlined, size: 20),
+              activeIcon: Icon(Icons.local_shipping, size: 20),
+              label: 'Mua hàng',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.notifications_active_outlined, size: 20),
