@@ -3,13 +3,13 @@ import 'package:abc_app/core/theme/app_theme.dart';
 import 'package:abc_app/features/auth/screens/login_screen.dart';
 import 'package:abc_app/features/auth/services/auth_service.dart';
 import 'package:abc_app/features/auth/widgets/abc_logo.dart';
-import 'package:abc_app/features/products/screens/products_screen.dart';
+import 'package:abc_app/features/products/screens/product_catalog_tab.dart';
 import 'package:abc_app/features/alerts/screens/alerts_screen.dart';
 import 'package:abc_app/features/audits/screens/audits_list_screen.dart';
 import 'package:abc_app/features/lots/screens/lots_and_scrap_screen.dart';
-import 'package:abc_app/features/pos/screens/pos_screen.dart';
 import 'package:abc_app/features/kpi/screens/kpi_dashboard_screen.dart';
-import 'package:abc_app/features/ai_advisor/screens/ai_advisor_screen.dart';
+import 'package:abc_app/features/invoices/screens/invoices_screen.dart';
+import 'package:abc_app/features/purchases/screens/purchase_orders_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,13 +24,13 @@ class _HomeScreenState extends State<HomeScreen> {
   final _authService = AuthService();
 
   final List<Widget> _screens = [
-    const ProductsScreen(),       // MOB-02: Sản phẩm & Kho
-    const PosScreen(),            // MOB-03: POS Bán hàng
+    const ProductCatalogTab(),    // Sản phẩm: Danh sách hàng hóa (theo sku.png)
+    const PurchaseOrdersScreen(), // Đặt hàng NCC: danh sách/chi tiết PO
     const AuditsListScreen(),     // MOB-04 / F07: Kiểm kho
     const LotsAndScrapScreen(),   // F08: Lô & Hủy hàng
-    const AlertsScreen(),         // MOB-05: Cảnh báo
+    const AlertsScreen(),         // Thông báo: hạn dùng & tồn thấp
+    const InvoicesScreen(),       // Tra cứu hóa đơn bán lẻ (/sales/orders)
     const KpiDashboardScreen(),   // MOB-06: KPI & Báo cáo
-    const AiAdvisorScreen(),      // MOB-07: AI Business Advisor
   ];
 
   @override
@@ -84,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _currentIndex == 5
+      appBar: _currentIndex == 6
           ? null
           : AppBar(
               titleSpacing: 14,
@@ -145,8 +145,8 @@ class _HomeScreenState extends State<HomeScreen> {
           type: BottomNavigationBarType.fixed,
           selectedItemColor: const Color(0xFF065F46),
           unselectedItemColor: const Color(0xFF64748B),
-          selectedLabelStyle: const TextStyle(fontFamily: 'serif', fontWeight: FontWeight.w800, fontSize: 11),
-          unselectedLabelStyle: const TextStyle(fontFamily: 'serif', fontWeight: FontWeight.w500, fontSize: 10.5),
+          selectedLabelStyle: const TextStyle(fontFamily: 'serif', fontWeight: FontWeight.w800, fontSize: 10),
+          unselectedLabelStyle: const TextStyle(fontFamily: 'serif', fontWeight: FontWeight.w500, fontSize: 9.5),
           elevation: 0,
           currentIndex: _currentIndex,
           onTap: (idx) {
@@ -158,12 +158,12 @@ class _HomeScreenState extends State<HomeScreen> {
             BottomNavigationBarItem(
               icon: Icon(Icons.inventory_2_outlined, size: 19),
               activeIcon: Icon(Icons.inventory_2, size: 19),
-              label: 'Kho',
+              label: 'Sản phẩm',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.point_of_sale_outlined, size: 19),
-              activeIcon: Icon(Icons.point_of_sale, size: 19),
-              label: 'POS',
+              icon: Icon(Icons.shopping_cart_outlined, size: 19),
+              activeIcon: Icon(Icons.shopping_cart_rounded, size: 19),
+              label: 'Đặt hàng',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.fact_check_outlined, size: 19),
@@ -176,19 +176,19 @@ class _HomeScreenState extends State<HomeScreen> {
               label: 'Lô & Hủy',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.notifications_active_outlined, size: 19),
-              activeIcon: Icon(Icons.notifications_active, size: 19),
-              label: 'Cảnh báo',
+              icon: Icon(Icons.notifications_none_rounded, size: 19),
+              activeIcon: Icon(Icons.notifications_rounded, size: 19),
+              label: 'Thông báo',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long_outlined, size: 19),
+              activeIcon: Icon(Icons.receipt_long, size: 19),
+              label: 'Hóa đơn',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.insights_rounded, size: 19),
               activeIcon: Icon(Icons.insights, size: 19),
               label: 'KPI',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.smart_toy_outlined, size: 19),
-              activeIcon: Icon(Icons.smart_toy, size: 19),
-              label: 'AI',
             ),
           ],
         ),
