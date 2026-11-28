@@ -51,6 +51,7 @@ class ProductItem {
   final int totalStock;
   final double retailValue;
   final double avgPrice;
+  final String unitOfMeasure;
   final List<ProductVariant> variants;
 
   ProductItem({
@@ -65,6 +66,7 @@ class ProductItem {
     required this.totalStock,
     required this.retailValue,
     required this.avgPrice,
+    this.unitOfMeasure = 'cái',
     required this.variants,
   });
 
@@ -86,6 +88,9 @@ class ProductItem {
       totalStock: (json['stockQty'] as num? ?? 0).toInt(),
       retailValue: (json['retailValue'] as num? ?? 0).toDouble(),
       avgPrice: (json['avgPrice'] as num? ?? 0).toDouble(),
+      unitOfMeasure: (json['unitOfMeasure'] as String?)?.trim().isNotEmpty == true
+          ? json['unitOfMeasure'] as String
+          : 'cái',
       variants: variantsList,
     );
   }
